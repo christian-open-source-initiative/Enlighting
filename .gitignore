@@ -1,0 +1,7 @@
+*.csv
+*.jpg
+*.png
+properties.json
+render_html/
+blurred/
+images/

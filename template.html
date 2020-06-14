@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+.grid-container {
+	display: grid;
+	grid-template-columns: repeat(1, 100rem);
+	grid-template-rows: repeat(#ROW_COUNT, 60rem);
+    grid-gap: 25rem;
+}
+
+.grid-container > * {
+	margin: auto;
+	width: 50%;
+	/*Default Min height*/
+    min-height: 20rem;
+	border: 0.5px solid black !important;
+	padding: 5rem;
+
+	/* You can also add an image.  via 'background-image' */
+	border-radius: 8px;
+	display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.translucent {
+    background-color: rgba(0,0,0, 0.5) !important;
+    padding: 1rem;
+	/* Install your own fonts */
+	font-family: "Archivo Black";
+	font-size: 1.5em;
+    color: white;
+	width: 95%;
+}
+
+#CUSTOM_ID_IMAGE
+
+</style>
+</head>
+<body style="background-color:black;">
+
+<!-- This should be what is outputted by your script. You can copy and paste it here -->
+<div class="grid-container">
+#REPLACE_ME
+</div>
+
+</body>
+</html>
