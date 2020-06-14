@@ -208,24 +208,8 @@ def output_file(fname, output_fname):
             img_folder = IMG_FOLDER if random.randint(0, 1) == 0 else BLURRED_IMG_FOLDER
             css_custom = get_custom_properties_for_image(image_file_mapping[i], prop)
 
-            # Check if there is a max-height constraint
-            # divide by 40 which is just grid column 65 - 20
-            cur_text = column_data_as_html[i]
-            height_prop = get_height_properties(cur_text, css_custom)
-            while not(height_prop.max_okay() and height_prop.min_okay()):
-                print("{} has a problem with its height when paired with given text".format(image_file_mapping[i]))
-                if not height_prop.max_okay():
-                    print("\testimated height {}em but is programmed to have max height {}em".format(height_prop.image_height, height_prop.max_height))
-                    print("\testimated height {}em but is programmed to have min height {}em".format(height_prop.image_height, height_prop.min_height))
-
-                # Repick another image and try again
-                image_file_mapping[i] = random.choice(image_files)
-                print("\trepicked image to be {}".format(image_file_mapping[i]))
-                print("\n")
-                css_custom = get_custom_properties_for_image(image_file_mapping[i], prop)
-                height_prop = get_height_properties(cur_text, css_custom)
-
             # Set the custom properties once more only if it is not a duplicate
+            cur_text = column_data_as_html[i]
             img_file = None
             html_column_data = None
             if (i - 1) >= 0 and names_data[i-1][:-11] in names_data[i]:
@@ -235,8 +219,24 @@ def output_file(fname, output_fname):
                 img_file = image_file_mapping[i]
                 html_column_data = column_data_as_html[i]
 
+                # Check if there is a max-height constraint
+                # divide by 40 which is just grid column 65 - 20
+                height_prop = get_height_properties(cur_text, css_custom)
+                while not(height_prop.max_okay() and height_prop.min_okay()):
+                    print("{} has a problem with its height when paired with given text".format(image_file_mapping[i]))
+                    if not height_prop.max_okay():
+                        print("\testimated height {}em but is programmed to have max height {}em".format(height_prop.image_height, height_prop.max_height))
+                    if not height_prop.min_okay():
+                        print("\testimated height {}em but is programmed to have min height {}em".format(height_prop.image_height, height_prop.min_height))
+
+                    # Repick another image and try again
+                    image_file_mapping[i] = random.choice(image_files)
+                    print("\trepicked image to be {}".format(image_file_mapping[i]))
+                    print("\n")
+                    css_custom = get_custom_properties_for_image(image_file_mapping[i], prop)
+                    height_prop = get_height_properties(cur_text, css_custom)
+
             re_height_prop = get_height_properties(html_column_data, get_custom_properties_for_image(img_file, prop))
-            re_height_prop = get_height_properties(cur_text, css_custom)
             min_height_css = "min-height:{}em;".format(re_height_prop.min_height)
             max_height_css = "max-height:{}em;".format(re_height_prop.max_height)
             prop = set_custom_properties_for_image([min_height_css, max_height_css], img_file, prop)
