@@ -213,7 +213,9 @@ def output_file(fname, output_fname):
             img_file = None
             html_column_data = None
             if (i - 1) >= 0 and names_data[i-1][:-11] in names_data[i]:
+                print("DUPLICATE: {}".format(names_data[i]))
                 img_file = image_file_mapping[i-1]
+                image_file_mapping = image_file_mapping[:i] + [img_file] + image_file_mapping[i:]
                 html_column_data = column_data_as_html[i-1]
             else:
                 img_file = image_file_mapping[i]
