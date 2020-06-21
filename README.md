@@ -1,6 +1,6 @@
-# Enlighten: A Quote Image Renderer
+# Enlighting: A Quote Image Renderer
 
-<img src="example_output.jpg" width="40%">
+<img src="example_output.jpg" width="50%">
 
 This program converts a list of CSV quotes and a folder of image groups into an image with the quotes rendered on the image. Useful for mass producing quotes powerpoints.
 Each individual image can be fine-tuned via `html/css`.
