@@ -268,7 +268,7 @@ def render(args):
 
 
             # Write an individual html file for this specific image
-            with open(os.path.join(args.html_render_folder, names_data[i].strip().replace(" ", "_") + ".html"), "w+b") as ind_f:
+            with open(os.path.join(args.html_render_folder, names_data[i].strip().replace(":", "_").replace(" ", "_") + ".html"), "w+b") as ind_f:
                 ind_template_file = template_file.replace("#REPLACE_ME", "\n".join([column_data_as_html[i]]))
                 ind_template_file = ind_template_file.replace("#ROW_COUNT", str(1))
                 ind_template_file = ind_template_file.replace("#CUSTOM_ID_IMAGE", "\n".join([img_css_inject[i]]))
