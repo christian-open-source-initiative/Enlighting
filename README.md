@@ -41,7 +41,7 @@ Users can choose to modify general quote-image settings inside the template file
 the grid size, the padding of the text, font-family, etc. Modifying this file will modify all images generated. Please note that the fonts supported
 is the same as what is installed inside the host's OS.
 
-To fine-tune each image, users must setup their environment to run each stage of the program separately. See [parent section](#Advanced:-Running-Each-Stage-Individually).
+To fine-tune each image, users must setup their environment to run each stage of the program separately. See [parent section](#Advanced-Running-Each-Stage-Individually).
 
 ### Fine-Tuning Background Image Constraints
 
@@ -104,7 +104,7 @@ To be able to:
   * Includes: font, font-size, color, scale, etc.
 * Modify each image-quote's background
 
-Users will have to run each stage individually (see [parent section](#Advanced:-Running-Each-Stage-Individually)).
+Users will have to run each stage individually (see [parent section](#Advanced-Running-Each-Stage-Individually)).
 After running `render_html.py`, a `render_html` folder will contain all raw `html` files that encode the final output image.
 Users can then open up each file individually and modify the `css` file. During this time, users can also modify the background
 image URL to change another image.
