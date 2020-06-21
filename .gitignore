@@ -1,6 +1,7 @@
 *.csv
 *.jpg
 *.png
+__pycache__/
 properties.json
 render_html/
 blurred/

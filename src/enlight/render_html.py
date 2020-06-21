@@ -1,48 +1,60 @@
-# Install this via "pip install pandas"
+#############################################
+# Project: Enlighting
+# File: src\enlighten\render_html.py
+# By: ProgrammingIncluded
+# Website: ProgrammingIncluded.com
+# Description: Converts a CSV of quotes and names
+#     into a folder of html with the quotes in front.
+#############################################
+
+# std
+import os
+import re
+import json
+import uuid
+import shutil
+import random
+import hashlib
+import argparse
+from os import listdir
+from os.path import isfile, join
+from textwrap import dedent
+
+# ext
 import pandas as pd
 import numpy as np
 from skimage.filters import gaussian
 from PIL import Image
 from faker import Faker
 
-import hashlib
-import random
-import json
-from textwrap import dedent
-
-import os
-import re
-import uuid
-import shutil
-from os import listdir
-from os.path import isfile, join
-
+# argparse defaults
 IMG_FOLDER = "images"
 BLURRED_IMG_FOLDER = "blurred"
 RENDER_FOLDER = "render_html"
 COMMENT_COLUMN_IDX = 3
 NAME_COLUMN_IDX = 1
-# in EM0
+
+# EM measurements for rendering HTML
 DEF_MAX_HEIGHT = 65
 DEF_MIN_HEIGHT = 30
 DEF_MAX_WIDTH = 65
 
-# Different for e`ach font
+# Different for each font
 CHAR_CONVERSION_RATE_EM_TO_LEN = 2.0
 
+# Image caching
 IMAGE_HASH_MAPPING = {}
 
-def process_data():
-    pass
+SAMPLE_FILE_NAME="sample.html"
 
 def get_image_files(fpath=IMG_FOLDER):
     return [f for f in listdir(fpath) if isfile((join(fpath, f)))]
 
-def gen_blurred_image(sigma=3):
-    for non_blurred in get_image_files():
+def gen_blurred_image(args, sigma=3):
+    for non_blurred in get_image_files(fpath=args.raw_images):
         fpath = os.path.join("blurred", non_blurred)
         if not os.path.exists(fpath):
-            image = Image.open(os.path.join(IMG_FOLDER, non_blurred))
+            image = Image.open(os.path.join(args.raw_images, non_blurred))
             im = np.array(image)
             im = gaussian(im, sigma=sigma, multichannel=True)
             image = Image.fromarray((im * 255).astype(np.uint8))
@@ -138,21 +150,21 @@ def set_custom_properties_for_image(css, img_name, prop):
     prop[h]["css"] = css
     return prop
 
-def output_file(fname, output_fname):
-    df = pd.read_csv(fname)
+def render(args):
+    df = pd.read_csv(args.input_csv)
 
     template_file = ""
-    with open("template.html") as f:
+    with open(args.template_html) as f:
         template_file = f.read()
 
-    with open(os.path.join("render_html", output_fname), "wb") as f:
+    with open(os.path.join(args.html_render_folder, SAMPLE_FILE_NAME), "wb") as f:
         # Grab the text column
         column_data_as_html = []
         names_data = []
         total_index = 0
         for _, row in df.iterrows():
             uid = str(uuid.uuid1())[0:8]
-            text = row[COMMENT_COLUMN_IDX]
+            text = row[args.quote_column_idx]
             preprocess_text = text.strip().strip("\n")
 
             # If the text is too long, split the file into two slides or more
@@ -182,14 +194,14 @@ def output_file(fname, output_fname):
 
                 # Process each slide as unique slide and add to lists
                 for slide_text, idx in zip(multi_slide_text, range(len(multi_slide_text))):
-                    html_text = get_display_tag(total_index, None if len(multi_slide_text) != (idx + 1) else row[NAME_COLUMN_IDX], slide_text)
+                    html_text = get_display_tag(total_index, None if len(multi_slide_text) != (idx + 1) else row[args.name_column_idx], slide_text)
                     column_data_as_html.append(html_text.replace("\n", "<br />").strip())
-                    names_data.append(row[NAME_COLUMN_IDX] + "_{}_{}".format(uid, idx))
+                    names_data.append(row[args.name_column_idx] + "_{}_{}".format(uid, idx))
                     total_index += 1
             else:
-                html_text = get_display_tag(total_index, row[NAME_COLUMN_IDX], preprocess_text)
+                html_text = get_display_tag(total_index, row[args.name_column_idx], preprocess_text)
                 column_data_as_html.append(html_text.replace("\n", "<br />").strip())
-                names_data.append(row[NAME_COLUMN_IDX] + "_{}".format(uid))
+                names_data.append(row[args.name_column_idx] + "_{}".format(uid))
                 total_index +=1
 
         image_file_mapping = []
@@ -256,7 +268,7 @@ def output_file(fname, output_fname):
 
 
             # Write an individual html file for this specific image
-            with open(os.path.join(RENDER_FOLDER, names_data[i].strip().replace(" ", "_") + ".html"), "w+b") as ind_f:
+            with open(os.path.join(args.html_render_folder, names_data[i].strip().replace(" ", "_") + ".html"), "w+b") as ind_f:
                 ind_template_file = template_file.replace("#REPLACE_ME", "\n".join([column_data_as_html[i]]))
                 ind_template_file = ind_template_file.replace("#ROW_COUNT", str(1))
                 ind_template_file = ind_template_file.replace("#CUSTOM_ID_IMAGE", "\n".join([img_css_inject[i]]))
@@ -269,20 +281,48 @@ def output_file(fname, output_fname):
         f.write(final_template_file.encode("utf-8"))
 
         # Copy the image folders into render_html
-        if os.path.exists(os.path.join(RENDER_FOLDER, "blurred")):
-            shutil.rmtree(os.path.join(RENDER_FOLDER, "blurred"))
-        if os.path.exists(os.path.join(RENDER_FOLDER, "images")):
-            shutil.rmtree(os.path.join(RENDER_FOLDER, "images"))
+        if os.path.exists(os.path.join(args.html_render_folder, "blurred")):
+            shutil.rmtree(os.path.join(args.html_render_folder, "blurred"))
+        if os.path.exists(os.path.join(args.html_render_folder, "images")):
+            shutil.rmtree(os.path.join(args.html_render_folder, "images"))
 
-        shutil.copytree("blurred", os.path.join(RENDER_FOLDER, "blurred"))
-        shutil.copytree("images", os.path.join(RENDER_FOLDER, "images"))
+        shutil.copytree("blurred", os.path.join(args.html_render_folder, "blurred"))
+        shutil.copytree("images", os.path.join(args.html_render_folder, "images"))
 
+def get_argument_parser(parser=argparse.ArgumentParser(prog="render", description="Renders CSV data into HTML files.")):
+    parser.add_argument("--raw-images", help="File containing various raw images.", default=IMG_FOLDER)
+    parser.add_argument("--html-render-folder", help="Path to the image renderer", default=RENDER_FOLDER)
+    parser.add_argument("--template-html", help="Path to the template HTML for rendering", default="templates/template.html")
+    parser.add_argument("--input-csv", help="Path to the CSV file containing quotes and names", default="input.csv")
+    parser.add_argument("--name-column-idx", help="The default index of column in CSV that contains the names", default=NAME_COLUMN_IDX, type=int)
+    parser.add_argument("--quote-column-idx", help="The defualt index of the column in CSV that contains the quotes", default=COMMENT_COLUMN_IDX, type=int)
+    return parser
+
+def parse_args():
+    return get_argument_parser().parse_args()
+
+def create_output_folder(args):
+    # Clean the output folder and create it if it doesn't exist
+    if os.path.exists(args.html_render_folder):
+        shutil.rmtree(args.html_render_folder)
+        os.mkdir(args.html_render_folder)
+
+def main():
+    script_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Set the CWD to the scripts folder.
+    os.chdir(script_path)
+    args = parse_args()
+
+    # Generate all the necessary output folders
+    create_output_folder(args)
+
+    # Generate blurred images
+    gen_blurred_image(args)
+
+    # You can optinoally use generate_dummy_data to generate dummy data before rendering
+    # generate_dummy_data("input.csv")
+    render(args.input_csv, args)
 
 if __name__ == "__main__":
-    # Clean the output folder
-    if os.path.exists(RENDER_FOLDER):
-        shutil.rmtree(RENDER_FOLDER)
-        os.mkdir(RENDER_FOLDER)
-    gen_blurred_image()
-    # generate_dummy_data("input.csv")
-    output_file("input.csv", "sample.html")
+    main()
