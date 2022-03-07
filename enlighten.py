@@ -107,10 +107,12 @@ def main():
     for _, row in input_data.iterrows():
         quote = row[quotes_column].replace("\\n", "\n")
         source = row[source_column]
-        image_fpath = os.path.join(args.images_fpath, row[image_column])
+        image_fpath = str(row[image_column])
 
-        if image_fpath is None or len(image_fpath) == 0:
-            image_fpath = image_names[randint(0, len(image_names - 1))]
+        if image_fpath is None or image_fpath == "nan" or len(image_fpath) == 0:
+            image_fpath = image_names[randint(0, len(image_names) - 1)]
+        else:
+            image_fpath = os.path.join(args.images_fpath, image_fpath)
 
         img = Image.open(image_fpath)
         img = ImageOps.exif_transpose(img)
@@ -143,7 +145,7 @@ def main():
                              text_region,
                              quote + " \n\n" + source,
                              font_fpath,
-                             target_percentage=0.05,
+                             target_percentage=0.055,
                              tab_space = args.tab_width,
                              font_range=(0, args.font_size))
 
