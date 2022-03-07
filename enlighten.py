@@ -37,6 +37,9 @@ def parse_args():
     # Overwrite output files
     parser.add_argument("--force", action="store_true", default=False, help="Force overwrite output files.")
 
+    # Auto tab
+    parser.add_argument("--tab-width", default=4, help="Tab width (in spaces) for quotes. Set to 0 for no tabs.", type=int)
+
     return parser.parse_args()
 
 def create_folder_or_get_path(fpath):
@@ -98,7 +101,7 @@ def main():
     image_column = 0
     font_fpath = os.path.join(args.fonts_fpath, args.font)
     for _, row in input_data.iterrows():
-        quote = row[quotes_column]
+        quote = row[quotes_column].replace("\\n", "\n")
         source = row[source_column]
         image_fpath = os.path.join(args.images_fpath, row[image_column])
 
@@ -111,18 +114,20 @@ def main():
         img_box = itools.Box(0, 0, img_size[0], img_size[1])
 
         # Generate unique output fpath
-        uid = md5((quote + source).encode()).hexdigest()[0:6]
+        uid = md5(source.encode()).hexdigest()[0:6]
         output_fpath = os.path.join(args.output_fpath, uid + ".jpg")
         if os.path.exists(output_fpath) and not args.force:
             raise RuntimeError(f"Output already exists for {output_fpath}. Consider use --force to overwrite.")
 
         # Generate overlay
         overlay_region = itools.calculate_margin_percentage(img_box, 0.05)
-        img = itools.draw_rect(img, overlay_region, color=(0, 0, 0), transparency=0.2)
+        # Render bottom region instead
+        # overlay_region = itools.calculate_margin_percentage(img_box.region_half_y()[1], 0.05)
+        img = itools.draw_rect(img, overlay_region, color=(0, 0, 0), transparency=0.45)
 
         # Generate text
         text_region = itools.calculate_margin_percentage(overlay_region, 0.1)
-        itools.draw_text_box(img, text_region, quote + "\n\n" + source, font_fpath)
+        itools.draw_text_box(img, text_region, quote + " \n\n" + source, font_fpath, target_percentage=0.05, tab_space = args.tab_width)
 
         # Save final result
         img = img.convert("RGB")

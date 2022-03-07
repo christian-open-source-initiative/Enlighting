@@ -34,6 +34,29 @@ class Box:
     def center(self):
         return (self.x + self.width() / 2, self.y + self.height() / 2)
 
+    def clone(self):
+        return Box(self.x, self.y, self.x2, self.y2)
+
+    def region_half_x(self):
+        """Returns two boxes half the X values"""
+        min_x = self.clone()
+        min_x.x2 = (min_x.x2 / 2.0)
+
+        max_x = self.clone()
+        max_x.x = (max_x.x2 / 2.0)
+
+        return (min_x, max_x)
+
+    def region_half_y(self):
+        """Returns two boxes half the Y values"""
+        min_y = self.clone()
+        min_y.y2 = (min_y.y2 / 2.0)
+
+        max_y = self.clone()
+        max_y.y = (max_y.y2 / 2.0)
+
+        return (min_y, max_y)
+
 # Helpers to calculate box render regions #
 def calculate_margin_percentage(box: Box, percent: float) -> Box:
     assert percent >= 0 and percent <= 1.0
@@ -70,6 +93,8 @@ def draw_text_box(
     box: Box,
     text: str,
     font_fpath: str,
+    target_percentage: float = 0.034,
+    tab_space: int = 4,
     color: tuple = (255, 255, 255),
     font_range: tuple = (1,1000)):
     """Draws text, as big as possible, in given textbox, unless font_size is specified."""
@@ -92,8 +117,6 @@ def draw_text_box(
 
     # First calculate smaller box that adheres to width constraints as possible
     # Operate in a fixed type font size by looking at percentage
-    target_percentage = 0.034
-
     # Obtain a viable font.
     target_font = None
     for size in range(*font_range):
@@ -113,14 +136,16 @@ def draw_text_box(
     lines = []
     while len(words) != 0:
         new_word = words.pop(0)
+        has_newline = "\n" in new_word
         new_buffer = buffer + " " + new_word
-        if len(new_buffer) * w > box.width():
-            lines.append(buffer + "\n")
+        if (len(new_buffer) * w) > box.width() or has_newline:
+            lines.append(buffer if has_newline else buffer + "\n")
             buffer = new_word
         else:
             buffer = new_buffer
     lines.append(buffer)
-    modified_text = "".join(lines)
+    modified_text = " " * tab_space
+    modified_text += "".join(lines)
     max_line = _largest(lines)
 
     # Finally render inside everything inside the box.
