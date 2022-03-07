@@ -7,7 +7,7 @@ from hashlib import md5
 from random import randint
 
 # Pillow
-from PIL import Image, ImageFont, ImageDraw
+from PIL import Image, ImageOps
 
 # Pandas
 import pandas as pd
@@ -17,6 +17,7 @@ import image_tools as itools
 
 SUPPORTED_IMAGE_FORMATS = ["jpg", "png"]
 SUPPORTED_FONT_FORMATS = ["ttf"]
+RENDER_STYLE = ["full", "bottom", "top"]
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Generates quotes to images.")
@@ -32,13 +33,16 @@ def parse_args():
 
     # Font loading
     parser.add_argument("--font", "-f", default="ArchivoBlack-Regular.ttf", help="Default font to use.")
-    parser.add_argument("--font-size", default=100, help="Default font size.", type=int)
+    parser.add_argument("--font-size", default=200, help="Default font size, used as max value, not guranteed.", type=int)
 
     # Overwrite output files
     parser.add_argument("--force", action="store_true", default=False, help="Force overwrite output files.")
 
     # Auto tab
     parser.add_argument("--tab-width", default=4, help="Tab width (in spaces) for quotes. Set to 0 for no tabs.", type=int)
+
+    # Style
+    parser.add_argument("--render-style", "-r", default="full", help="Type of render style.", choices=RENDER_STYLE)
 
     return parser.parse_args()
 
@@ -109,6 +113,7 @@ def main():
             image_fpath = image_names[randint(0, len(image_names - 1))]
 
         img = Image.open(image_fpath)
+        img = ImageOps.exif_transpose(img)
         img = img.convert("RGBA")
         img_size = img.size
         img_box = itools.Box(0, 0, img_size[0], img_size[1])
@@ -120,14 +125,27 @@ def main():
             raise RuntimeError(f"Output already exists for {output_fpath}. Consider use --force to overwrite.")
 
         # Generate overlay
-        overlay_region = itools.calculate_margin_percentage(img_box, 0.05)
-        # Render bottom region instead
-        # overlay_region = itools.calculate_margin_percentage(img_box.region_half_y()[1], 0.05)
+        overlay_region = None
+        if args.render_style == "full":
+            overlay_region = itools.calculate_margin_percentage(img_box, 0.05)
+        elif args.render_style == "bottom":
+            overlay_region = itools.calculate_margin_percentage(img_box.region_half_y()[1], 0.05)
+        elif args.render_style == "top":
+            overlay_region = itools.calculate_margin_percentage(img_box.region_half_y()[0], 0.05)
+        else:
+            raise RuntimeError("Invalid execution.")
+
         img = itools.draw_rect(img, overlay_region, color=(0, 0, 0), transparency=0.45)
 
         # Generate text
         text_region = itools.calculate_margin_percentage(overlay_region, 0.1)
-        itools.draw_text_box(img, text_region, quote + " \n\n" + source, font_fpath, target_percentage=0.05, tab_space = args.tab_width)
+        itools.draw_text_box(img,
+                             text_region,
+                             quote + " \n\n" + source,
+                             font_fpath,
+                             target_percentage=0.05,
+                             tab_space = args.tab_width,
+                             font_range=(0, args.font_size))
 
         # Save final result
         img = img.convert("RGB")
