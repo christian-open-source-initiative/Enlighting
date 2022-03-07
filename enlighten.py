@@ -96,6 +96,7 @@ def main():
     quotes_column = 2
     source_column = 1
     image_column = 0
+    font_fpath = os.path.join(args.fonts_fpath, args.font)
     for _, row in input_data.iterrows():
         quote = row[quotes_column]
         source = row[source_column]
@@ -115,12 +116,13 @@ def main():
         if os.path.exists(output_fpath) and not args.force:
             raise RuntimeError(f"Output already exists for {output_fpath}. Consider use --force to overwrite.")
 
-        # Processing
-        font = ImageFont.truetype(os.path.join(args.fonts_fpath, args.font), size=args.font_size)
-        draw = ImageDraw.Draw(img)
+        # Generate overlay
+        overlay_region = itools.calculate_margin_percentage(img_box, 0.05)
+        img = itools.draw_rect(img, overlay_region, color=(0, 0, 0), transparency=0.2)
 
-        margin_region = itools.calculate_margin_percentage(img_box, 0.05)
-        img = itools.draw_rect(img, margin_region, color=(0, 0, 0), transparency=0.4)
+        # Generate text
+        text_region = itools.calculate_margin_percentage(overlay_region, 0.1)
+        itools.draw_text_box(img, text_region, quote + "\n\n" + source, font_fpath)
 
         # Save final result
         img = img.convert("RGB")

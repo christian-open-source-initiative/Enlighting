@@ -5,6 +5,7 @@ Adds image helper tools.
 from PIL import Image, ImageFont, ImageDraw
 
 class Box:
+    """Helper class for drawing boxes."""
     def __init__(self, x, y, x2, y2):
         assert x < x2
         assert y < y2
@@ -30,7 +31,10 @@ class Box:
     def height(self):
         return self.y2 - self.y
 
-# Helpers to calculate box render regions
+    def center(self):
+        return (self.x + self.width() / 2, self.y + self.height() / 2)
+
+# Helpers to calculate box render regions #
 def calculate_margin_percentage(box: Box, percent: float) -> Box:
     assert percent >= 0 and percent <= 1.0
     margin_x = int(box.width() * percent)
@@ -46,6 +50,7 @@ def calculate_margin(box: Box, margin_x: int, margin_y: int) -> Box:
     assert box.contains(margin_box)
     return margin_box
 
+# Draw helpers #
 def draw_rect(img: Image, box: Box, color: tuple, transparency: float):
     """Draws rect at specified location. Assumes img is RGBA."""
     assert transparency >= 0 and transparency <= 1.0
@@ -59,3 +64,74 @@ def draw_rect(img: Image, box: Box, color: tuple, transparency: float):
     overlay_draw = ImageDraw.Draw(overlay)
     overlay_draw.rectangle((box.x, box.y, box.x2, box.y2), fill=color + (opacity, ))
     return Image.alpha_composite(img, overlay)
+
+def draw_text_box(
+    img: Image,
+    box: Box,
+    text: str,
+    font_fpath: str,
+    color: tuple = (255, 255, 255),
+    font_range: tuple = (1,1000)):
+    """Draws text, as big as possible, in given textbox, unless font_size is specified."""
+
+    for i in color:
+        assert i >= 0 and i <= 255
+
+    def _get_font_width_height(font, text):
+        l, t, r, b = font.getbbox(text)
+        w = r - l
+        h = b - t
+        return (w, h)
+
+    def _largest(arr):
+        maxv = ""
+        for i in arr:
+            if len(i) > len(maxv):
+                maxv = i
+        return maxv
+
+    # First calculate smaller box that adheres to width constraints as possible
+    # Operate in a fixed type font size by looking at percentage
+    target_percentage = 0.034
+
+    # Obtain a viable font.
+    target_font = None
+    for size in range(*font_range):
+        target_font = ImageFont.FreeTypeFont(font_fpath, size=size)
+        w, h = _get_font_width_height(target_font, "c")
+
+        if w > box.width() * target_percentage or h > box.height() * target_percentage:
+            target_font = ImageFont.FreeTypeFont(font_fpath, size=(size-1))
+            break
+
+    # Just a single letter to guestimate
+    w, _ = _get_font_width_height(target_font, "c")
+
+    # Insert newlines by guestimating
+    words = text.split(" ")
+    buffer = words.pop(0)
+    lines = []
+    while len(words) != 0:
+        new_word = words.pop(0)
+        new_buffer = buffer + " " + new_word
+        if len(new_buffer) * w > box.width():
+            lines.append(buffer + "\n")
+            buffer = new_word
+        else:
+            buffer = new_buffer
+    lines.append(buffer)
+    modified_text = "".join(lines)
+    max_line = _largest(lines)
+
+    # Finally render inside everything inside the box.
+    font = None
+    for size in range(*font_range):
+        font = ImageFont.FreeTypeFont(font_fpath, size=size)
+        w, h = _get_font_width_height(font, max_line)
+
+        if w > box.width() or h > box.height():
+            font = ImageFont.FreeTypeFont(font_fpath, size=(size-1))
+            break
+
+    d = ImageDraw.Draw(img)
+    d.text(box.center(), modified_text, fill=color, anchor="mm", font=font)
