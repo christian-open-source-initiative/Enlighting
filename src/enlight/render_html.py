@@ -153,7 +153,7 @@ def set_custom_properties_for_image(css, img_name, prop):
     return prop
 
 def render(args):
-    df = pd.read_csv(args.input_csv)
+    df = pd.read_csv(args.input_csv, escapechar="\\")
 
     template_file = ""
     with open(args.template_html) as f:
@@ -221,7 +221,7 @@ def render(args):
 
         img_css_inject = []
         for i in range(len(image_file_mapping)):
-            img_folder = IMG_FOLDER if random.randint(0, 1) == 0 else BLURRED_IMG_FOLDER
+            img_folder = IMG_FOLDER if args.disable_blurred_image else BLURRED_IMG_FOLDER
             css_custom = get_custom_properties_for_image(image_file_mapping[i], prop)
 
             # Set the custom properties once more only if it is not a duplicate
@@ -301,6 +301,7 @@ def get_argument_parser(parser=argparse.ArgumentParser(prog="render", descriptio
     parser.add_argument("--name-column-idx", help="The default index of column in CSV that contains the names", default=NAME_COLUMN_IDX, type=int)
     parser.add_argument("--quote-column-idx", help="The defualt index of the column in CSV that contains the quotes", default=COMMENT_COLUMN_IDX, type=int)
     parser.add_argument("--image-column-idx", help="Specific a specific image for this render.", default=IMAGE_COLUMN_IDX, type=int)
+    parser.add_argument("--disable-blurred-image", help="Disables blurred images.", default=False)
     return parser
 
 def parse_args():

@@ -8,7 +8,7 @@ Each individual image can be fine-tuned via `html/css`.
 The project was written roughly in a span of a weekend's worth of work. As a result, the codebase is suboptimal.
 There are some optimizations that can still be done. See [Extended Project Goals](#Extended-Goals) sections for more details.
 
-There are no commandline options. Direct modification of the program is required.
+There are no commandline options for modifying images properties. Direct modification of a CSS file is required.
 
 ## Setup
 
