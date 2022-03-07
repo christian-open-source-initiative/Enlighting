@@ -31,8 +31,9 @@ from faker import Faker
 IMG_FOLDER = "images"
 BLURRED_IMG_FOLDER = "blurred"
 RENDER_FOLDER = "render_html"
-COMMENT_COLUMN_IDX = 3
+COMMENT_COLUMN_IDX = 2
 NAME_COLUMN_IDX = 1
+IMAGE_COLUMN_IDX = 0
 
 # EM measurements for rendering HTML
 DEF_MAX_HEIGHT = 65
@@ -56,8 +57,8 @@ def gen_blurred_image(args, sigma=3):
         if not os.path.exists(fpath):
             image = Image.open(os.path.join(args.raw_images, non_blurred))
             im = np.array(image)
+            im = im[:, :, ::-1]
             im = gaussian(im, sigma=sigma, multichannel=True)
-            image = Image.fromarray((im * 255).astype(np.uint8))
             image.save(fpath)
 
 def generate_dummy_data(fname, max_count=100):
@@ -86,10 +87,11 @@ def read_or_create_properties_json(hashmapping):
             json.dump(hashmapping, f, indent=4, sort_keys=True)
             return hashmapping
 
-        result = json.load(f)
-        for h in hashmapping:
-            if h not in result:
-                result[h] = {"filename": h["filename"]}
+        result = dict(json.load(f))
+        print(hashmapping)
+        for k, h in hashmapping.items():
+            if h["filename"] not in result:
+                result[k] = {"filename": h["filename"]}
                 is_mod = True
     if is_mod:
         with open(prop_filename, "w") as f:
@@ -104,7 +106,7 @@ def get_display_tag(index, name, text):
     if name is None:
         name = ""
     else:
-        names = name.lower().split()
+        names = name.split()
         name = " ".join([n[0].upper() + n[1:] for n in names])
         name = "<br /><br />" + name
 
@@ -162,6 +164,7 @@ def render(args):
         column_data_as_html = []
         names_data = []
         total_index = 0
+        image_file_mapping = []
         for _, row in df.iterrows():
             uid = str(uuid.uuid1())[0:8]
             text = row[args.quote_column_idx]
@@ -170,6 +173,7 @@ def render(args):
             # If the text is too long, split the file into two slides or more
             max_slide_text = 512
 
+            image_file_mapping.append(row[args.image_column_idx])
             slide_count = len(preprocess_text) // max_slide_text + 1
             if slide_count > 1:
                 multi_slide_text = []
@@ -204,7 +208,6 @@ def render(args):
                 names_data.append(row[args.name_column_idx] + "_{}".format(uid))
                 total_index +=1
 
-        image_file_mapping = []
         image_files = get_image_files()
         image_files_hash = {hashlib.md5(k.encode()).hexdigest()[0:10]: {"filename": k} for k in image_files}
         # Generate special properties file if applicable
@@ -212,7 +215,8 @@ def render(args):
 
         # For each text, specify a specific img
         for i in range(len(column_data_as_html)):
-            image_file_mapping.append(random.choice(image_files))
+            if image_file_mapping[i] is None or image_file_mapping[i] == "":
+                image_file_mapping[i] = random.choice(image_files)
 
 
         img_css_inject = []
@@ -296,6 +300,7 @@ def get_argument_parser(parser=argparse.ArgumentParser(prog="render", descriptio
     parser.add_argument("--input-csv", help="Path to the CSV file containing quotes and names", default="input.csv")
     parser.add_argument("--name-column-idx", help="The default index of column in CSV that contains the names", default=NAME_COLUMN_IDX, type=int)
     parser.add_argument("--quote-column-idx", help="The defualt index of the column in CSV that contains the quotes", default=COMMENT_COLUMN_IDX, type=int)
+    parser.add_argument("--image-column-idx", help="Specific a specific image for this render.", default=IMAGE_COLUMN_IDX, type=int)
     return parser
 
 def parse_args():
