@@ -1,15 +1,19 @@
 # std
 import os
-import sys
 import glob
 import argparse
+from hashlib import md5
 
+from random import randint
 
 # Pillow
-from PIL import ImageFont, ImageDraw
+from PIL import Image, ImageFont, ImageDraw
 
 # Pandas
 import pandas as pd
+
+# Enlighten
+import image_tools as itools
 
 SUPPORTED_IMAGE_FORMATS = ["jpg", "png"]
 SUPPORTED_FONT_FORMATS = ["ttf"]
@@ -28,6 +32,10 @@ def parse_args():
 
     # Font loading
     parser.add_argument("--font", "-f", default="ArchivoBlack-Regular.ttf", help="Default font to use.")
+    parser.add_argument("--font-size", default=100, help="Default font size.", type=int)
+
+    # Overwrite output files
+    parser.add_argument("--force", action="store_true", default=False, help="Force overwrite output files.")
 
     return parser.parse_args()
 
@@ -91,8 +99,32 @@ def main():
     for _, row in input_data.iterrows():
         quote = row[quotes_column]
         source = row[source_column]
-        image_fpath = row[image_column]
+        image_fpath = os.path.join(args.images_fpath, row[image_column])
 
+        if image_fpath is None or len(image_fpath) == 0:
+            image_fpath = image_names[randint(0, len(image_names - 1))]
+
+        img = Image.open(image_fpath)
+        img = img.convert("RGBA")
+        img_size = img.size
+        img_box = itools.Box(0, 0, img_size[0], img_size[1])
+
+        # Generate unique output fpath
+        uid = md5((quote + source).encode()).hexdigest()[0:6]
+        output_fpath = os.path.join(args.output_fpath, uid + ".jpg")
+        if os.path.exists(output_fpath) and not args.force:
+            raise RuntimeError(f"Output already exists for {output_fpath}. Consider use --force to overwrite.")
+
+        # Processing
+        font = ImageFont.truetype(os.path.join(args.fonts_fpath, args.font), size=args.font_size)
+        draw = ImageDraw.Draw(img)
+
+        margin_region = itools.calculate_margin_percentage(img_box, 0.05)
+        img = itools.draw_rect(img, margin_region, color=(0, 0, 0), transparency=0.4)
+
+        # Save final result
+        img = img.convert("RGB")
+        img.save(output_fpath)
 
 if __name__ == '__main__':
     main()
