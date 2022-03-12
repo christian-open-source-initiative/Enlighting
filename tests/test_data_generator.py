@@ -21,14 +21,13 @@ from faker import Faker
 from enlight.trainer.data_generator import PseudoRandomImageCSVDataGenerator
 
 @pytest.fixture(scope="session")
-def basic_text_generator():
-    seed = int(random.random() * 10*32)
+def basic_text_generator(seed):
     print(f"faker generator seed: {seed}")
     def generator():
         fake = Faker()
         Faker.seed(seed)
         def _impl():
-            for i in range(5):
+            for _ in range(5):
                 name = f"{fake.first_name()} {fake.last_name()}"
                 yield (name, fake.paragraph(nb_sentences=3))
         return _impl

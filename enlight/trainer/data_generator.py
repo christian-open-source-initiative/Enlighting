@@ -7,8 +7,9 @@ import csv
 import random
 import hashlib
 
-from types import GeneratorType
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
+from types import GeneratorType
 
 # enlight
 import enlight.utils as utils
@@ -92,6 +93,17 @@ class PseudoRandomImageCSVDataGenerator(EnlightCSVDataGenerator):
         self.seed = seed
         self._internal_seed = seed
 
+    @contextmanager
+    def new_seed(self, seed=0):
+        """
+        Returns new seed and then updates internal state.
+        Can also seed the seed as it generates for more randomness.
+        """
+        random.seed(seed)
+        yield
+        # set the next state of the seed as part of the value
+        self._internal_seed = int(random.random() * 10**32)
+
     def image_select(self, img_list, quote_source, quote):
         """
         Random selects an image
@@ -102,15 +114,12 @@ class PseudoRandomImageCSVDataGenerator(EnlightCSVDataGenerator):
         # produces the same values.
         final_str = quote_source + quote + str(self._internal_seed)
 
-        # Consistent hash across python instances
         hash_val = hashlib.sha256(final_str.encode("utf-8")).hexdigest()
-        random.seed(int(hash_val, 16) % 10**32)
 
-        rand_index = random.randint(0, len(img_list) - 1)
-        selected_img = img_list[rand_index]
-
-        # set the next state of the seed as part of the value
-        self._internal_seed = int(random.random() * 10**32)
+        # Consistent hash across python instances
+        with self.new_seed(int(hash_val, 16) % 10 **32):
+            rand_index = random.randint(0, len(img_list) - 1)
+            selected_img = img_list[rand_index]
 
         return selected_img
 
@@ -122,11 +131,10 @@ class PseudoRandomImageCSVDataGenerator(EnlightCSVDataGenerator):
 
         # Consistent hash across python instances
         hash_val = hashlib.sha256(final_str.encode("utf-8")).hexdigest()
-        random.seed(int(hash_val, 16) % 10**32)
-        rand_index = random.randint(0, len(utils.RENDER_STYLE) - 2)
-        selected_style = utils.RENDER_STYLE[rand_index]
 
-        # set the next state of the seed as part of the value
-        self._internal_seed = int(random.random() * 10**32)
+        # Consistent hash across python instances
+        with self.new_seed(int(hash_val, 16) % 10 **32):
+            rand_index = random.randint(0, len(utils.RENDER_STYLE) - 2)
+            selected_style = utils.RENDER_STYLE[rand_index]
 
         return selected_style
