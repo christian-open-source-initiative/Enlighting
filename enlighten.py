@@ -33,7 +33,7 @@ def parse_args():
     # Style
     parser.add_argument("--render-style", "-r",
                         default="full",
-                        help="Type of render style. Auto defaults to csv encoding, otherwise random.",
+                        help="Type of render style. Auto defaults to csv encoding, otherwise uses AI.",
                         choices=utils.RENDER_STYLE)
 
     return parser.parse_args()

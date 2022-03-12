@@ -171,7 +171,7 @@ def draw_text_box(
         new_buffer = buffer + " " + new_word
         if (len(new_buffer) * w) > box.width() or has_newline:
             lines.append(buffer if has_newline else buffer + "\n")
-            buffer = new_word
+            buffer = " " + new_word
         else:
             buffer = new_buffer
     lines.append(buffer)

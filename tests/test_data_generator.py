@@ -18,7 +18,7 @@ import pandas as pd
 from faker import Faker
 
 # enlight
-from enlight.trainer.data_generator import PseudoRandomImageCSVDataGenerator
+from enlight.ai.data_generator import PseudoRandomImageCSVDataGenerator
 
 @pytest.fixture(scope="session")
 def basic_text_generator(seed):

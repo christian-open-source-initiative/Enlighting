@@ -110,8 +110,8 @@ class PseudoRandomImageCSVDataGenerator(EnlightCSVDataGenerator):
         """
 
         # The internal seed is from the prior random value
-        # this gurantees consecutive calls to the same generator seed
-        # produces the same values.
+        # this gurantees that a new generator class created
+        # will always be the same sequence of values for any given session.
         final_str = quote_source + quote + str(self._internal_seed)
 
         hash_val = hashlib.sha256(final_str.encode("utf-8")).hexdigest()
@@ -125,8 +125,8 @@ class PseudoRandomImageCSVDataGenerator(EnlightCSVDataGenerator):
 
     def style_select(self, img_list, quote_source, quote):
         # The internal seed is from the prior random value
-        # this gurantees consecutive calls to the same generator seed
-        # produces the same values.
+        # this gurantees that a new generator class created
+        # will always be the same sequence of values for any given session.
         final_str = quote_source + quote + str(self._internal_seed)
 
         # Consistent hash across python instances

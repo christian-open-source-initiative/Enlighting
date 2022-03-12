@@ -1,6 +1,7 @@
-# Enlighting V2: A Quote Image Renderer
+# Enlighting V2: A AI Powered Quote Image Renderer
 
-Need to generate inspirational quotes in bulk and don't want to tinker with font sizes every image source?
+Need to generate inspirational quotes in bulk and don't want to tinker with font sizes every image source but have a preference on where to place a quote?
+
 Enlighten can generate a few templated options and is smart enough to auto-scale font according to your file source.
 No more long hours of fine tuning images. Just pick a style, an image, and bulk generate!
 
@@ -54,3 +55,7 @@ You can specify via the `-r` flag. See `--help` for more info.
 ### Bottom Style
 
 <img src="examples/bottom.jpg" width="30%" />
+
+## Contribution
+
+All new features submitted must have their code-path exercised in `tests/`.

@@ -17,6 +17,8 @@ import pandas as pd
 import enlight.utils as utils
 import enlight.image_tools as itools
 
+from enlight.ai.infer import StyleInferer
+
 SUPPORTED_IMAGE_FORMATS = ["jpg", "png"]
 SUPPORTED_FONT_FORMATS = ["ttf"]
 DEFAULT_FONT = "ArchivoBlack-Regular.ttf"
@@ -43,7 +45,8 @@ def render(
     font: str = DEFAULT_FONT,
     font_size: int = 200,
     tab_width: int = 4,
-    force: bool = False
+    force: bool = False,
+    df: pd.DataFrame = None
 ):
     # Generate folder if not already
     create_folder_or_get_path(images_fpath)
@@ -69,7 +72,12 @@ def render(
         raise RuntimeError(f"No specified font in font path: {font}")
 
     # Load CSV file
-    input_data = pd.read_csv(input_csv, escapechar=escape_string)
+    assert (df is not None) ^ (input_csv is not None), "One must be given"
+    input_data = None
+    if df is not None:
+        input_data = df
+    else:
+        input_data = pd.read_csv(input_csv, escapechar=escape_string)
 
     print("Loaded CSV file:")
     print(input_data)
@@ -90,13 +98,10 @@ def render(
         image_fpath = str(row[image_column])
 
         # Sanitize and use random otherwise
-        if image_fpath is None or image_fpath == "nan" or len(image_fpath) == 0:
+        if image_fpath is None or str(image_fpath) == "nan" or len(image_fpath) == 0:
             image_fpath = image_names[randint(0, len(image_names) - 1)]
         else:
             image_fpath = os.path.join(images_fpath, image_fpath)
-
-        if style is None or style == "nan" or len(style) == 0:
-            style = utils.RENDER_STYLE[:-1][randint(0, len(utils.RENDER_STYLE) - 2)]
 
         img = Image.open(image_fpath)
         img = ImageOps.exif_transpose(img)
@@ -109,6 +114,11 @@ def render(
         output_fpath_mod = os.path.join(output_fpath, uid + ".jpg")
         if os.path.exists(output_fpath_mod) and not force:
             raise RuntimeError(f"Output already exists for {output_fpath_mod}. Consider use --force to overwrite.")
+
+        # Use AI if applicable!
+        if style is None or str(style) == "nan" or len(style) == 0:
+            s_infer = StyleInferer()
+            style = s_infer.infer_style(img, source, quote)
 
         # Generate transparent overlay
         overlay_region = itools.calculate_margin_style(img_box, style, 0.05)
