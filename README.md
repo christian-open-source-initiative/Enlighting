@@ -22,6 +22,7 @@ Which will generate images inside the `output/` by default. An example image loo
   - Can be empty to select random image in folder.
 - `quote_source`: name of the quote source.
 - `quote`: the quote itself.
+- `style`: Per image style. `--render-style auto` must be enabled for this column to work.
 
 An example CSV file has been placed in the project folder.
 
@@ -31,7 +32,7 @@ There are a few parameters exposed to make some batch fine-tuning.
 
 * `--tab-width` sets the default tab width for each quote. Set to 0 for no tabs.
 * `--font-size` the default max size font. This is only a suggestiong.
-* `-render-style` render a specific type of style.
+* `--render-style` render a specific type of style.
 
 For more options, see `--help` to see up-to-date.
 

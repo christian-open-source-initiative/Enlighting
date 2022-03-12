@@ -13,11 +13,11 @@ from PIL import Image, ImageOps
 import pandas as pd
 
 # Enlighten
-import image_tools as itools
+import enlight.image_tools as itools
+import enlight.utils as utils
 
 SUPPORTED_IMAGE_FORMATS = ["jpg", "png"]
 SUPPORTED_FONT_FORMATS = ["ttf"]
-RENDER_STYLE = ["full", "bottom", "top"]
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Generates quotes to images.")
@@ -42,7 +42,10 @@ def parse_args():
     parser.add_argument("--tab-width", default=4, help="Tab width (in spaces) for quotes. Set to 0 for no tabs.", type=int)
 
     # Style
-    parser.add_argument("--render-style", "-r", default="full", help="Type of render style.", choices=RENDER_STYLE)
+    parser.add_argument("--render-style", "-r",
+                        default="full",
+                        help="Type of render style. Auto defaults to csv encoding, otherwise random.",
+                        choices=utils.RENDER_STYLE)
 
     return parser.parse_args()
 
@@ -51,12 +54,6 @@ def create_folder_or_get_path(fpath):
         os.makedirs(fpath)
 
     return fpath
-
-def load_image_names(images_fpath, supported_formats=SUPPORTED_IMAGE_FORMATS):
-    results = []
-    for format in supported_formats:
-        results += list(glob.glob(os.path.join(images_fpath, f"*.{format}")))
-    return results
 
 def load_fonts(font_fpath, supported_formats=SUPPORTED_FONT_FORMATS):
     results = []
@@ -73,7 +70,7 @@ def main():
     create_folder_or_get_path(args.fonts_fpath)
 
     # Image loading
-    image_names = load_image_names(args.images_fpath)
+    image_names = utils.load_image_names(args.images_fpath)
     print(f"Images loaded {len(image_names)}")
 
     if len(image_names) == 0:
@@ -100,6 +97,7 @@ def main():
         raise RuntimeError(f"No valid CSV loaded in: {args.input_csv}")
 
     # Generate the image
+    style_column = 3
     quotes_column = 2
     source_column = 1
     image_column = 0
@@ -107,12 +105,17 @@ def main():
     for _, row in input_data.iterrows():
         quote = row[quotes_column].replace("\\n", "\n")
         source = row[source_column]
+        style = row[style_column] if args.render_style == "auto" else args.render_style
         image_fpath = str(row[image_column])
 
+        # Sanitize and use random otherwise
         if image_fpath is None or image_fpath == "nan" or len(image_fpath) == 0:
             image_fpath = image_names[randint(0, len(image_names) - 1)]
         else:
             image_fpath = os.path.join(args.images_fpath, image_fpath)
+
+        if style is None or style == "nan" or len(style) == 0:
+            style = utils.RENDER_STYLE[:-1][randint(0, len(utils.RENDER_STYLE) - 2)]
 
         img = Image.open(image_fpath)
         img = ImageOps.exif_transpose(img)
@@ -128,11 +131,11 @@ def main():
 
         # Generate overlay
         overlay_region = None
-        if args.render_style == "full":
+        if style == "full":
             overlay_region = itools.calculate_margin_percentage(img_box, 0.05)
-        elif args.render_style == "bottom":
+        elif style == "bottom":
             overlay_region = itools.calculate_margin_percentage(img_box.region_half_y()[1], 0.05)
-        elif args.render_style == "top":
+        elif style == "top":
             overlay_region = itools.calculate_margin_percentage(img_box.region_half_y()[0], 0.05)
         else:
             raise RuntimeError("Invalid execution.")
