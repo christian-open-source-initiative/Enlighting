@@ -17,7 +17,7 @@ import pandas as pd
 from faker import Faker
 
 # enlight
-from trainer.data_generator import PseudoRandomImageCSVDataGenerator
+from enlight.trainer.data_generator import PseudoRandomImageCSVDataGenerator
 
 @pytest.fixture(scope="session")
 def basic_text_generator():
@@ -33,8 +33,7 @@ def basic_text_generator():
         return _impl
     return generator
 
-
-def test_pseudo_random_generator(basic_text_generator, workspace_fpath, image_folder):
+def test_pseudo_random_generator(enlighten_render_csv, basic_text_generator, workspace_fpath, image_folder, output_folder):
     seed = random.randint(0, 2048)
     print(seed)
 
@@ -45,20 +44,19 @@ def test_pseudo_random_generator(basic_text_generator, workspace_fpath, image_fo
     frames = []
     for filename in output_filenames:
         csv_generator = PseudoRandomImageCSVDataGenerator(seed, basic_text_generator(), image_folder, max_data)
-        try:
-            csv_generator.generate_csv(filename)
-            csv_file = pd.read_csv(filename)
-            print(csv_file)
-            frames.append(csv_file)
-        finally:
-            if os.path.exists(filename):
-                os.remove(filename)
+        csv_generator.generate_csv(filename)
+        csv_file = pd.read_csv(filename)
+        print(csv_file)
+        frames.append(csv_file)
 
     for idx, df in enumerate(frames):
         for df_t in frames[idx:]:
             assert df.equals(df_t), "Not all CSV files are the same for same seeds."
 
-
+    # Load one of the files and generate some sample output
+    output_path = os.path.join(workspace_fpath, "psuedo_random_generator_output")
+    os.mkdir(output_path)
+    enlighten_render_csv(output_filenames[0], output_path)
 
 def test_image_folder_count(image_folder):
     assert GENERATE_IMAGE_COUNT == len(os.listdir(image_folder))

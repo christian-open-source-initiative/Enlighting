@@ -7,17 +7,18 @@ import os
 import sys
 import uuid
 
+from contextlib import contextmanager
+from shutil import copytree
 from tempfile import TemporaryDirectory
 
+# numpy
 import numpy as np
 
 # Pillow
-from PIL import Image, ImageOps
+from PIL import Image
 
 # perlin noise
-from perlin_numpy import (
-    generate_perlin_noise_2d
-)
+from perlin_numpy import generate_perlin_noise_2d
 
 # pytest
 import pytest
@@ -25,6 +26,9 @@ import pytest
 # Setup import path
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(TEST_DIR, os.pardir))
+
+# enlight
+from enlight.render import render
 
 GENERATE_IMAGE_COUNT = 5
 GENERATE_IMG_RESOLUTION = (300, 400)
@@ -40,6 +44,19 @@ def generate_perlin_image(x, y):
     noise *= 255 / 2
     noise = noise.astype(np.uint8)
     return Image.fromarray(noise, mode="L")
+
+@pytest.fixture(scope="session")
+def workspace_cwd(workspace_fpath):
+    @contextmanager
+    def _workspace():
+        old_dir = os.getcwd()
+        try:
+            os.chdir(os.path.abspath(workspace_fpath))
+            yield
+        finally:
+            os.chdir(old_dir)
+
+    return _workspace
 
 @pytest.fixture(scope="session")
 def workspace_fpath(request):
@@ -67,3 +84,27 @@ def image_folder(workspace_fpath):
 
     yield image_fpath
 
+@pytest.fixture(scope="session")
+def output_folder(workspace_fpath):
+    return os.path.join(workspace_fpath, "output")
+
+@pytest.fixture(scope="session")
+def fonts_folder(workspace_fpath):
+    dest =  os.path.join(workspace_fpath, "fonts")
+    copytree(os.path.join(TEST_DIR, os.pardir, "fonts"), dest)
+    return dest
+
+@pytest.fixture(scope="session")
+def enlighten_render_csv(image_folder, fonts_folder):
+    """
+    Helper wrapper function to wrap around render function.
+    """
+    def _render(input_csv, output_folder):
+        render(
+            image_folder,
+            output_folder,
+            fonts_folder,
+            input_csv
+        )
+
+    return _render

@@ -2,6 +2,7 @@
 Generates training data for our CSV file.
 """
 
+import os
 import csv
 import random
 import hashlib
@@ -44,6 +45,7 @@ class EnlightCSVDataGenerator(ABC):
         """
         # grab image lists
         img_names = utils.load_image_names(self.image_folder)
+        img_names = [os.path.split(p)[1] for p in img_names]
         hash_lookup_img_names = {k: None for k in img_names}
 
         results = []
@@ -61,7 +63,7 @@ class EnlightCSVDataGenerator(ABC):
             results.append((image_name, quote_source, quote, style))
 
         with open(output_fpath, "w") as f:
-            csv_writer = csv.DictWriter(f, fieldnames=self.fields, delimiter=",")
+            csv_writer = csv.DictWriter(f, fieldnames=self.fields, delimiter=",", quotechar="\"", escapechar="\\")
             csv_writer.writeheader()
             for r in results:
                 csv_writer.writerow(dict(zip(self.fields, r)))
