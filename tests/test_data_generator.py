@@ -1,5 +1,6 @@
 """
-Tests the data generator class.
+Tests the data generator class and uses render() as subroutine so implicitly tests
+render function.
 """
 
 import os
@@ -33,10 +34,19 @@ def basic_text_generator():
         return _impl
     return generator
 
-def test_pseudo_random_generator(enlighten_render_csv, basic_text_generator, workspace_fpath, image_folder, output_folder):
-    seed = random.randint(0, 2048)
-    print(seed)
+@pytest.fixture(scope="session")
+def seed():
+    """
+    Testing seed for the given session.
+    """
+    seed = random.randint(0, 10**32)
+    print(f"SESSION SEED: {seed}")
+    return seed
 
+def test_pseudo_random_generator(enlighten_render_csv, basic_text_generator, workspace_fpath, image_folder, seed):
+    """
+    Tests the PseudoRandomImageCSVDataGenerator class.
+    """
     max_data = 256
     output_filenames = ["prg_one.csv", "prg_two.csv", "once_more.csv"]
     output_filenames = [os.path.join(workspace_fpath, fpath) for fpath in output_filenames]

@@ -155,7 +155,7 @@ def draw_text_box(
 
     # First calculate smaller box that adheres to width constraints as possible
     # Operate in a fixed type font size by looking at some percentage of the size.
-    # Obtain a viable font..
+    # Obtain a viable font.
     target_font = _calculate_target_font("c", target_percentage)
 
     # Just a single letter to guestimate
