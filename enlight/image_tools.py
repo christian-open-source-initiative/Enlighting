@@ -2,6 +2,13 @@
 Adds image helper tools.
 """
 
+from typing import List
+
+# enlight
+from enlight.utils import RENDER_STYLE
+import enlight.image_tools as itools
+
+# pillow
 from PIL import Image, ImageFont, ImageDraw
 
 class Box:
@@ -72,6 +79,25 @@ def calculate_margin(box: Box, margin_x: int, margin_y: int) -> Box:
                      box.y2 - margin_y)
     assert box.contains(margin_box)
     return margin_box
+
+def calculate_margin_style(box: Box, style: List[str], percent: float) -> Box:
+    assert style in RENDER_STYLE
+
+    if style == "full":
+        return itools.calculate_margin_percentage(box, percent)
+    elif style == "bottom":
+        return itools.calculate_margin_percentage(box.region_half_y()[1], percent)
+    elif style == "top":
+        return itools.calculate_margin_percentage(box.region_half_y()[0], percent)
+    elif style == "left":
+        return itools.calculate_margin_percentage(box.region_half_x()[0], percent)
+    elif style == "right":
+        return itools.calculate_margin_percentage(box.region_half_x()[1], percent)
+
+    spec = style.split("-")[1:]
+    for s in spec:
+        box = calculate_margin_style(box, s, percent)
+    return box
 
 # Draw helpers #
 def draw_rect(img: Image, box: Box, color: tuple, transparency: float):

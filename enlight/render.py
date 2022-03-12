@@ -33,7 +33,6 @@ def load_fonts(font_fpath, supported_formats=SUPPORTED_FONT_FORMATS):
         results += list(glob.glob(os.path.join(font_fpath, f"*.{format}")))
     return results
 
-
 def render(
     images_fpath: str,
     output_fpath: str,
@@ -111,17 +110,8 @@ def render(
         if os.path.exists(output_fpath_mod) and not force:
             raise RuntimeError(f"Output already exists for {output_fpath_mod}. Consider use --force to overwrite.")
 
-        # Generate overlay
-        overlay_region = None
-        if style == "full":
-            overlay_region = itools.calculate_margin_percentage(img_box, 0.05)
-        elif style == "bottom":
-            overlay_region = itools.calculate_margin_percentage(img_box.region_half_y()[1], 0.05)
-        elif style == "top":
-            overlay_region = itools.calculate_margin_percentage(img_box.region_half_y()[0], 0.05)
-        else:
-            raise RuntimeError("Invalid execution.")
-
+        # Generate transparent overlay
+        overlay_region = itools.calculate_margin_style(img_box, style, 0.05)
         img = itools.draw_rect(img, overlay_region, color=(0, 0, 0), transparency=0.45)
 
         # Generate text

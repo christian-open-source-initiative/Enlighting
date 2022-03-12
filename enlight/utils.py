@@ -7,7 +7,16 @@ import glob
 
 SUPPORTED_IMAGE_FORMATS = ["jpg", "png"]
 SUPPORTED_FONT_FORMATS = ["ttf"]
-RENDER_STYLE = ["full", "bottom", "top", "auto"]
+RENDER_STYLE = ["full",
+                "bottom",
+                "top",
+                "auto",
+                "left",
+                "right",
+                "quarter-top-left",
+                "quarter-top-right",
+                "quarter-bottom-right",
+                "quarter-bottom-left"]
 
 def load_image_names(images_fpath, supported_formats=SUPPORTED_IMAGE_FORMATS):
     results = []
