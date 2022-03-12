@@ -141,17 +141,22 @@ def draw_text_box(
                 maxv = i
         return maxv
 
-    # First calculate smaller box that adheres to width constraints as possible
-    # Operate in a fixed type font size by looking at percentage
-    # Obtain a viable font.
-    target_font = None
-    for size in range(*font_range):
-        target_font = ImageFont.FreeTypeFont(font_fpath, size=size)
-        w, h = _get_font_width_height(target_font, "c")
+    def _calculate_target_font(line, target_percent=1.0):
+        target_font = None
+        for size in range(*font_range):
+            target_font = ImageFont.FreeTypeFont(font_fpath, size=size)
+            w, h = _get_font_width_height(target_font, line)
 
-        if w > box.width() * target_percentage or h > box.height() * target_percentage:
-            target_font = ImageFont.FreeTypeFont(font_fpath, size=(size-1))
-            break
+            if w > box.width() * target_percent or h > box.height() * target_percent:
+                target_font = ImageFont.FreeTypeFont(font_fpath, size=(size-1))
+                break
+        return target_font
+
+
+    # First calculate smaller box that adheres to width constraints as possible
+    # Operate in a fixed type font size by looking at some percentage of the size.
+    # Obtain a viable font..
+    target_font = _calculate_target_font("c", target_percentage)
 
     # Just a single letter to guestimate
     w, _ = _get_font_width_height(target_font, "c")
@@ -175,14 +180,7 @@ def draw_text_box(
     max_line = _largest(lines)
 
     # Finally render inside everything inside the box.
-    font = None
-    for size in range(*font_range):
-        font = ImageFont.FreeTypeFont(font_fpath, size=size)
-        w, h = _get_font_width_height(font, max_line)
-
-        if w > box.width() or h > box.height():
-            font = ImageFont.FreeTypeFont(font_fpath, size=(size-1))
-            break
+    font = _calculate_target_font(max_line, 1.0)
 
     d = ImageDraw.Draw(img)
     d.text(box.center(), modified_text, fill=color, anchor="mm", font=font)
