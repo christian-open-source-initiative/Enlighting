@@ -29,6 +29,7 @@ def parse_args():
     parser.add_argument("--output-fpath", default="output", help="Output folder.")
     parser.add_argument("--images-fpath", help="Default images folder", default="images")
     parser.add_argument("--fonts-fpath", default="fonts", help="Folder container valid fonts.")
+    parser.add_argument("--test-data-csv", default="enlighten.csv", help="CSV containing test data.")
     return parser.parse_args()
 
 def load_images(args, data):
@@ -106,8 +107,10 @@ def main():
     expanded = [(*k.split(".jpg"), v) for k, v in training_data.items()]
     expanded = [(e[0] + ".jpg", *e[1:]) for e in expanded]
 
-    test_data = pd.read_csv("enlighten.csv")
+    test_data = pd.read_csv(args.test_data_csv)
     df = pd.DataFrame.from_records(expanded, columns=["image", "style", "in"])
+
+    # Comment out to save time
     svm_train_in_group_only(args, StyleInferer(RENDER_STYLE[:-1]), df.copy(), test_data)
     svm_poly_train_in_group_only(args, StyleInferer(RENDER_STYLE[:-1]), df.copy(), test_data)
     svm_linear_train_in_group_only(args, StyleInferer(RENDER_STYLE[:-1]), df.copy(), test_data)

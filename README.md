@@ -17,6 +17,19 @@ Which will generate images inside the `output/` by default. An example image loo
 
 <img src="examples/full.jpg" width="30%" />
 
+### Model Downloads
+
+Due to limitations of github free acounts for lfs storage, a model could not be included as-is in the repository.
+The model itself is a gigabyte. As a result, you will need to manually download a model here:
+
+* [SVM Linear Kernel](https://drive.google.com/file/d/15vtfvPNf5ktzDtFvawp_YAOSYCm4KSzG/view?usp=sharing)
+
+Place inside `models/` or specify using `--ai-model-file`.
+
+Alternatively a sample training script has been included under `examples/svm_scripture_dataset_train` which allows for labeling of
+data images and manually training from your set of images.
+
+
 ## CSV File Format
 
 - `image_name`: name of the image file found in `--image-fpath`.

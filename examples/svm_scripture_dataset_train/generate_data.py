@@ -24,24 +24,15 @@ sys.path.append(os.path.join(ROOT_DIR, os.pardir, os.pardir))
 from enlight.render import render
 from enlight.ai.data_generator import PseudoRandomImageCSVDataGenerator
 
-# scripture_example
-from converter import convert
-
 # pandas
 import pandas as pd
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Generates scripture quotes to images using AI.")
-
-    parser.add_argument("--output-csv", help="Output to enlighten csv file.", default="enlighten.csv")
-
-    parser.add_argument("--input-csv", help="Input to scripture csv file.", default="input.csv")
-    parser.add_argument("--output-fpath", default="output", help="Output folder.")
+    parser.add_argument("--input-csv", help="Input training csv file. Random generator used instead if not provided.", default=None)
     parser.add_argument("--images-fpath", help="Default images folder", default="images")
     parser.add_argument("--fonts-fpath", default="fonts", help="Folder container valid fonts.")
-    parser.add_argument("--force", action="store_true", default=False, help="Force overwrite output files.")
 
-    parser.add_argument("--generate", action="store_true", default=False, help="Interactive mode to train data.")
     parser.add_argument("--batch-size", "-b", default=256, help="Size of labels to generate at once.", type=int)
 
     return parser.parse_args()
@@ -56,30 +47,23 @@ def fake_text(batch, sentence_length, seed):
     fake = Faker()
     Faker.seed(seed)
     def _impl():
-        for _ in range(256):
+        for _ in range(batch):
             name = f"{fake.first_name()} {fake.last_name()}"
             yield (name, fake.paragraph(nb_sentences=3))
     return _impl
 
+def random_pick_from_csv(csv_path, batch):
+    csv_contents = pd.read_csv(csv_path)
+    def _impl():
+        # Some randomly large number
+        for _ in range(2**32):
+            rand_idx = random.randint(0, csv_contents.shape[0] - 1)
+            row = csv_contents.iloc[rand_idx, :]
+            yield (row["quote_source"], row["quote"])
+    return _impl
+
 def main():
     args = parse_args()
-
-    # Render result and exit
-    if not args.generate:
-        df = convert(args.input_csv, args.output_csv)
-
-        # remove redundant spaces
-        df["quote"] = df["quote"].map(sanitize_output)
-        render(
-            args.images_fpath,
-            args.output_fpath,
-            args.fonts_fpath,
-            None,
-            None,
-            df=df,
-            force=args.force
-        )
-        return
 
     # Start interactive session and train
     batch = args.batch_size
@@ -97,7 +81,13 @@ def main():
     feature_cache = {}
     while True:
         seed = int(random.random() * 10**32)
-        text_gen = fake_text(batch, 3, seed)
+
+        text_gen = None
+        if args.input_csv is not None:
+            text_gen = random_pick_from_csv(args.input_csv, batch)
+        else:
+            text_gen = fake_text(batch, 3, seed)
+
         generator = PseudoRandomImageCSVDataGenerator(int(random.random() * 10**32), text_gen, args.images_fpath, batch - 1)
         generator._feature_cache = feature_cache
         data_df = generator.generate()
@@ -111,8 +101,8 @@ def main():
             sure_no_df = sure_df[sure_df["drop"].map(lambda v: not look_up_table[v])]
             sure_yes_df = sure_df[sure_df["drop"].map(lambda v: look_up_table[v])]
 
-            assert sure_no_df.shape[0] + sure_yes_df.shape[0] + not_sure_df.shape[0] == data_df.shape[0]
             print("Cache has eliminated: {}".format(sure_df.shape[0]))
+            assert sure_no_df.shape[0] + sure_yes_df.shape[0] + not_sure_df.shape[0] == data_df.shape[0]
 
             names = render(
                 args.images_fpath,
@@ -162,6 +152,8 @@ def main():
             # Write snapshot
             with open("look_table.pickle", "w+b") as f:
                 pickle.dump(look_up_table, f)
+
+            print("SAVED TRAINING DATA")
 
             # Save feature cache across sessions
             feature_cache = generator._feature_cache
