@@ -1,0 +1,3 @@
+git+https://github.com/pvigier/perlin-numpy
+faker==13.*
+pytest==6.*

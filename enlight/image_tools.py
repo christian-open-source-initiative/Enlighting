@@ -2,6 +2,13 @@
 Adds image helper tools.
 """
 
+from typing import List
+
+# enlight
+from enlight.utils import RENDER_STYLE
+import enlight.image_tools as itools
+
+# pillow
 from PIL import Image, ImageFont, ImageDraw
 
 class Box:
@@ -73,6 +80,25 @@ def calculate_margin(box: Box, margin_x: int, margin_y: int) -> Box:
     assert box.contains(margin_box)
     return margin_box
 
+def calculate_margin_style(box: Box, style: List[str], percent: float) -> Box:
+    assert style in RENDER_STYLE
+
+    if style == "full":
+        return itools.calculate_margin_percentage(box, percent)
+    elif style == "bottom":
+        return itools.calculate_margin_percentage(box.region_half_y()[1], percent)
+    elif style == "top":
+        return itools.calculate_margin_percentage(box.region_half_y()[0], percent)
+    elif style == "left":
+        return itools.calculate_margin_percentage(box.region_half_x()[0], percent)
+    elif style == "right":
+        return itools.calculate_margin_percentage(box.region_half_x()[1], percent)
+
+    spec = style.split("-")[1:]
+    for s in spec:
+        box = calculate_margin_style(box, s, percent)
+    return box
+
 # Draw helpers #
 def draw_rect(img: Image, box: Box, color: tuple, transparency: float):
     """Draws rect at specified location. Assumes img is RGBA."""
@@ -115,17 +141,22 @@ def draw_text_box(
                 maxv = i
         return maxv
 
-    # First calculate smaller box that adheres to width constraints as possible
-    # Operate in a fixed type font size by looking at percentage
-    # Obtain a viable font.
-    target_font = None
-    for size in range(*font_range):
-        target_font = ImageFont.FreeTypeFont(font_fpath, size=size)
-        w, h = _get_font_width_height(target_font, "c")
+    def _calculate_target_font(line, target_percent=1.0):
+        target_font = None
+        for size in range(*font_range):
+            target_font = ImageFont.FreeTypeFont(font_fpath, size=size)
+            w, h = _get_font_width_height(target_font, line)
 
-        if w > box.width() * target_percentage or h > box.height() * target_percentage:
-            target_font = ImageFont.FreeTypeFont(font_fpath, size=(size-1))
-            break
+            if w > box.width() * target_percent or h > box.height() * target_percent:
+                target_font = ImageFont.FreeTypeFont(font_fpath, size=(size-1))
+                break
+        return target_font
+
+
+    # First calculate smaller box that adheres to width constraints as possible
+    # Operate in a fixed type font size by looking at some percentage of the size.
+    # Obtain a viable font.
+    target_font = _calculate_target_font("c", target_percentage)
 
     # Just a single letter to guestimate
     w, _ = _get_font_width_height(target_font, "c")
@@ -140,7 +171,7 @@ def draw_text_box(
         new_buffer = buffer + " " + new_word
         if (len(new_buffer) * w) > box.width() or has_newline:
             lines.append(buffer if has_newline else buffer + "\n")
-            buffer = new_word
+            buffer = " " + new_word
         else:
             buffer = new_buffer
     lines.append(buffer)
@@ -149,14 +180,7 @@ def draw_text_box(
     max_line = _largest(lines)
 
     # Finally render inside everything inside the box.
-    font = None
-    for size in range(*font_range):
-        font = ImageFont.FreeTypeFont(font_fpath, size=size)
-        w, h = _get_font_width_height(font, max_line)
-
-        if w > box.width() or h > box.height():
-            font = ImageFont.FreeTypeFont(font_fpath, size=(size-1))
-            break
+    font = _calculate_target_font(max_line, 1.0)
 
     d = ImageDraw.Draw(img)
     d.text(box.center(), modified_text, fill=color, anchor="mm", font=font)

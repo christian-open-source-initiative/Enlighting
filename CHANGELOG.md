@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed for any bug fixes.
 - Security in case of vulnerabilities.
 
+## v2.0.0
+
+- Added `auto` mode which supports AI models via `--ai-model-file`.
+- Added `enlighten.ai` which containers data generators and infer classes.
+- Added `tests` for testing data generators.
+- Added `examples/svm_scripture_dataset_train` for AI training.
+- Changed README to introduce AI changes.
+
 ## v1.0.0
 
 - Added brandnew render engine using `Pillow`

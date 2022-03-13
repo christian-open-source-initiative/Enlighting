@@ -1,0 +1,4 @@
+beautifulsoup4==2.2.1
+Requests==3.2
+Unidecode==1.2.0
+faker==1.16.0
