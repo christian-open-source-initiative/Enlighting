@@ -50,11 +50,12 @@ if __name__ == '__main__':
         args.output_fpath,
         args.fonts_fpath,
         args.input_csv,
+        args.ai_model_file,
         args.render_style,
         args.escape_string,
         args.font,
         args.font_size,
         args.tab_width,
         args.force,
-        args.ai_model_file
+        None
     )

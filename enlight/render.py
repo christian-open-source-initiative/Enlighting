@@ -92,7 +92,7 @@ def render(
 
     ai_model = None
     try:
-        with open(ai_model_file) as f:
+        with open(ai_model_file, "r+b") as f:
             ai_model = pickle.load(f)
     except Exception as e:
         print(f"Unable to load AI model: {str(e)}")
@@ -133,7 +133,9 @@ def render(
         # Use AI if applicable!
         if style is None or str(style) == "nan" or len(style) == 0:
             s_infer = StyleInferer(utils.RENDER_STYLE[:-1])
-            style = s_infer.infer(img, source, quote, ai_model)
+            # Generated image may have filename removed. Custom set for cache to work.
+            setattr(img, "filename", uid + ".jpg")
+            style = utils.RENDER_STYLE[s_infer.infer([img], [source], [quote], ai_model)[0][0]]
 
         # Generate transparent overlay
         overlay_region = itools.calculate_margin_style(img_box, style, 0.05)
