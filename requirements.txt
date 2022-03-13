@@ -3,5 +3,5 @@ pandas
 Pillow
 torch==1.*
 transformers==4.17.*
-tqdm==0.4.4
+tqdm==4.*
 sklearn
