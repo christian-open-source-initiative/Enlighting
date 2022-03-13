@@ -16,7 +16,7 @@ RENDER_STYLE = ["full",
                 "quarter-top-right",
                 "quarter-bottom-right",
                 "quarter-bottom-left",
-                "auto"]
+                "auto"] # auto must be last
 
 def load_image_names(images_fpath, supported_formats=SUPPORTED_IMAGE_FORMATS):
     results = []

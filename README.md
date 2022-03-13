@@ -22,7 +22,7 @@ Which will generate images inside the `output/` by default. An example image loo
 Due to limitations of github free acounts for lfs storage, a model could not be included as-is in the repository.
 The model itself is a gigabyte. As a result, you will need to manually download a model here:
 
-* [SVM Linear Kernel](https://drive.google.com/file/d/15vtfvPNf5ktzDtFvawp_YAOSYCm4KSzG/view?usp=sharing)
+* [SVM Linear Kernel](https://drive.google.com/file/d/1mwaC8GyxMAm2Q9NrsXvHVlBKQOU67sJe/view?usp=sharing)
 
 Place inside `models/` or specify using `--ai-model-file`.
 

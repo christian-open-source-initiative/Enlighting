@@ -134,8 +134,13 @@ def render(
         # Use AI if applicable!
         if style is None or str(style) == "nan" or len(style) == 0:
             # Generated image may have filename removed. Custom set for cache to work.
-            setattr(img, "filename", uid + ".jpg")
-            style = utils.RENDER_STYLE[s_infer.infer([img], [source], [quote], ai_model)[0][0]]
+            if ai_model is not None:
+                setattr(img, "filename", uid + ".jpg")
+                style = utils.RENDER_STYLE[s_infer.infer([img], [source], [quote], ai_model)[0][0]]
+            else:
+                print("Unable to load AI model. Have you downloaded the model? See README for instructions.")
+                print("Falling back to random styles.")
+                style = utils.RENDER_STYLE[:-1][randint(0, len(utils.RENDER_STYLE[:-1]) - 1)]
 
         # Generate transparent overlay
         overlay_region = itools.calculate_margin_style(img_box, style, 0.05)
