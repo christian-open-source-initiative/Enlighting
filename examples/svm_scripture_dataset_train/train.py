@@ -28,7 +28,6 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train scripture quote model.")
     parser.add_argument("--output-fpath", default="output", help="Output folder.")
     parser.add_argument("--images-fpath", help="Default images folder", default="images")
-    parser.add_argument("--fonts-fpath", default="fonts", help="Folder container valid fonts.")
     parser.add_argument("--test-data-csv", default="enlighten.csv", help="CSV containing test data.")
     return parser.parse_args()
 
@@ -79,9 +78,25 @@ def svm_train_in_group_only(args, inferer, train_data, test_data):
     calculate_accuracy(predictions, test_data)
     return model
 
+@model_function("svm_ovr_train_in_group_only")
+def svm_ovr_train_in_group_only(args, inferer, train_data, test_data):
+    model = inferer.train(load_images(args, train_data), [], [], train_data["style"], None, function_shape="ovr")
+    predictions = inferer.infer(load_images(args, test_data), [], [], model)
+    calculate_accuracy(predictions, test_data)
+    return model
+
 @model_function("svm_poly_train_in_group_only")
 def svm_poly_train_in_group_only(args, inferer, train_data, test_data):
     clf = svm.SVC(decision_function_shape="ovo", kernel="poly")
+    multilabel_classifier = MultiOutputClassifier(clf, n_jobs=-1)
+    model = inferer.train(load_images(args, train_data), [], [], train_data["style"], multilabel_classifier)
+    predictions = inferer.infer(load_images(args, test_data), [], [], model)
+    calculate_accuracy(predictions, test_data)
+    return model
+
+@model_function("svm_ovr_poly_train_in_group_only")
+def svm_ovr_poly_train_in_group_only(args, inferer, train_data, test_data):
+    clf = svm.SVC(decision_function_shape="ovr", kernel="poly")
     multilabel_classifier = MultiOutputClassifier(clf, n_jobs=-1)
     model = inferer.train(load_images(args, train_data), [], [], train_data["style"], multilabel_classifier)
     predictions = inferer.infer(load_images(args, test_data), [], [], model)
@@ -97,6 +112,49 @@ def svm_linear_train_in_group_only(args, inferer, train_data, test_data):
     calculate_accuracy(predictions, test_data)
     return model
 
+@model_function("svm_ovr_linear_train_in_group_only")
+def svm_ovr_linear_train_in_group_only(args, inferer, train_data, test_data):
+    clf = svm.SVC(decision_function_shape="ovr", kernel="linear")
+    multilabel_classifier = MultiOutputClassifier(clf, n_jobs=-1)
+    model = inferer.train(load_images(args, train_data), [], [], train_data["style"], multilabel_classifier)
+    predictions = inferer.infer(load_images(args, test_data), [], [], model)
+    calculate_accuracy(predictions, test_data)
+    return model
+
+@model_function("svm_linear_train_full_group")
+def svm_linear_train_full_group(args, inferer, train_data, test_data):
+    clf = svm.SVC(decision_function_shape="ovo", kernel="linear")
+    multilabel_classifier = MultiOutputClassifier(clf, n_jobs=-1)
+    # group by multiple to get multi-class
+    multiclass_style_data = train_data.groupby(["image"])["style"].apply(list).reset_index()
+    model = inferer.train(load_images(args, multiclass_style_data), [], [], multiclass_style_data["style"], multilabel_classifier)
+    predictions = inferer.infer(load_images(args, test_data), [], [], model)
+    calculate_accuracy(predictions, test_data)
+    return model
+
+@model_function("svm_poly_train_full_group")
+def svm_poly_train_full_group(args, inferer, train_data, test_data):
+    clf = svm.SVC(decision_function_shape="ovo", kernel="poly")
+    multilabel_classifier = MultiOutputClassifier(clf, n_jobs=-1)
+    # group by multiple to get multi-class
+    multiclass_style_data = train_data.groupby(["image"])["style"].apply(list).reset_index()
+    model = inferer.train(load_images(args, multiclass_style_data), [], [], multiclass_style_data["style"], multilabel_classifier)
+    predictions = inferer.infer(load_images(args, test_data), [], [], model)
+    calculate_accuracy(predictions, test_data)
+    return model
+
+@model_function("svm_train_full_group")
+def svm_train_full_group(args, inferer, train_data, test_data):
+    clf = svm.SVC(decision_function_shape="ovo", kernel="poly")
+    multilabel_classifier = MultiOutputClassifier(clf, n_jobs=-1)
+    # group by multiple to get multi-class
+    multiclass_style_data = train_data.groupby(["image"])["style"].apply(list).reset_index()
+    model = inferer.train(load_images(args, multiclass_style_data), [], [], multiclass_style_data["style"], multilabel_classifier)
+    predictions = inferer.infer(load_images(args, test_data), [], [], model)
+    calculate_accuracy(predictions, test_data)
+    return model
+
+
 def main():
     args = parse_args()
 
@@ -110,10 +168,24 @@ def main():
     test_data = pd.read_csv(args.test_data_csv)
     df = pd.DataFrame.from_records(expanded, columns=["image", "style", "in"])
 
-    # Comment out to save time
-    svm_train_in_group_only(args, StyleInferer(RENDER_STYLE[:-1]), df.copy(), test_data)
-    svm_poly_train_in_group_only(args, StyleInferer(RENDER_STYLE[:-1]), df.copy(), test_data)
+    # Positive only
+    df = df[df["in"]]
+
+    # linear techs
     svm_linear_train_in_group_only(args, StyleInferer(RENDER_STYLE[:-1]), df.copy(), test_data)
+    svm_ovr_linear_train_in_group_only(args, StyleInferer(RENDER_STYLE[:-1]), df.copy(), test_data)
+    svm_linear_train_full_group(args, StyleInferer(RENDER_STYLE[:-1]), df.copy(), test_data)
+
+    # rbf techs
+    svm_train_in_group_only(args, StyleInferer(RENDER_STYLE[:-1]), df.copy(), test_data)
+    svm_ovr_train_in_group_only(args, StyleInferer(RENDER_STYLE[:-1]), df.copy(), test_data)
+    svm_poly_train_full_group(args, StyleInferer(RENDER_STYLE[:-1]), df.copy(), test_data)
+
+    # Poly techs
+    svm_poly_train_in_group_only(args, StyleInferer(RENDER_STYLE[:-1]), df.copy(), test_data)
+    svm_ovr_poly_train_in_group_only(args, StyleInferer(RENDER_STYLE[:-1]), df.copy(), test_data)
+    svm_train_full_group(args, StyleInferer(RENDER_STYLE[:-1]), df.copy(), test_data)
+
 
 if __name__ == "__main__":
     main()

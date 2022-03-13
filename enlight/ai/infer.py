@@ -13,6 +13,7 @@ from transformers import BeitFeatureExtractor, BeitModel
 # sklearn
 from sklearn import svm
 from sklearn.multioutput import MultiOutputClassifier
+from sklearn.preprocessing import MultiLabelBinarizer
 
 class StyleInferer:
     """
@@ -40,17 +41,23 @@ class StyleInferer:
             self._feature_cache[img.filename] = result
             return result
 
-    def train(self, imgs, quote_srcs, quotes, styles, model=None):
+    def train(self, imgs, quote_srcs, quotes, styles, model=None, function_shape="ovo"):
         """Trains the given style."""
         multilabel_classifier = None
         if model is None:
-            clf = svm.SVC(decision_function_shape="ovo")
+            clf = svm.SVC(decision_function_shape=function_shape)
             multilabel_classifier = MultiOutputClassifier(clf, n_jobs=-1)
         else:
             multilabel_classifier = model
 
         X = [self.calculate_image_feature_vector(img) for img in imgs]
-        Y = [[self.classes_encoded[s]] for s in styles]
+
+        if isinstance(styles[0], list):
+            Y = [[self.classes_encoded[s] for s in ss] for ss in styles]
+            Y = MultiLabelBinarizer().fit_transform(Y)
+        else:
+            Y = [[self.classes_encoded[s]] for s in styles]
+
         return multilabel_classifier.fit(X, Y)
 
     def infer(self, imgs, quote_srcs, quotes, model):

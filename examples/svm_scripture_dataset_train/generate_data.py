@@ -102,6 +102,10 @@ def main():
             sure_yes_df = sure_df[sure_df["drop"].map(lambda v: look_up_table[v])]
 
             print("Cache has eliminated: {}".format(sure_df.shape[0]))
+            print(sure_no_df.shape[0])
+            print(sure_yes_df.shape[0])
+            print(not_sure_df.shape[0])
+            print(data_df.shape[0])
             assert sure_no_df.shape[0] + sure_yes_df.shape[0] + not_sure_df.shape[0] == data_df.shape[0]
 
             names = render(
