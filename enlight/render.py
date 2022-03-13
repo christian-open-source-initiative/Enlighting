@@ -60,7 +60,7 @@ def render(
 
     # Image loading
     image_names = utils.load_image_names(images_fpath)
-    print(f"Images loaded {len(image_names)}")
+    print(f"Images detected {len(image_names)}")
 
     if len(image_names) == 0:
         print(f"Unable to find supported images. Image files supported: {SUPPORTED_IMAGE_FORMATS}")
@@ -80,7 +80,7 @@ def render(
     assert (df is not None) ^ (input_csv is not None), "One must be given"
     input_data = None
     if df is not None:
-        input_data = df
+        input_data = df.copy()
     else:
         input_data = pd.read_csv(input_csv, escapechar=escape_string)
 

@@ -48,6 +48,7 @@ def parse_args():
     parser.add_argument("--load-model", default=None, help="Load model for inference.")
     parser.add_argument("--save-model", default="svm.pickle", help="Save model output location if in training mode.")
     parser.add_argument("--training-data", default="enlighten.csv", help="Training data csv.")
+    parser.add_argument("--batch-size", "-b", default=256, help="Size of labels to generate at once.", type=int)
 
     return parser.parse_args()
 
@@ -87,28 +88,55 @@ def main():
         return
 
     # Start interactive session and train
-    # This is training image dataset
-    batch = 2
-    seed = int(random.random() * 10**32)
-    text_gen = fake_text(batch, 3, seed)
-    generator = PseudoRandomImageCSVDataGenerator(int(random.random() * 10**32), text_gen, args.images_fpath, batch)
-    data_df = generator.generate()
+    batch = args.batch_size
+
+    look_up_table = None
+    if os.path.exists("look_table.pickle"):
+        with open("look_table.pickle", "r+b") as f:
+            look_up_table = pickle.load(f)
+            print(f"Lookup table loaded: {len(look_up_table)}")
+    else:
+        print("New lookup table.")
+        look_up_table = {}
+
+    model = None
+    if args.load_model is not None:
+        with open(args.load_model) as f:
+            model = pickle.loads(f)
 
     # generate a folder with all the temp values
+    feature_cache = {}
     while True:
+        seed = int(random.random() * 10**32)
+        text_gen = fake_text(batch, 3, seed)
+        generator = PseudoRandomImageCSVDataGenerator(int(random.random() * 10**32), text_gen, args.images_fpath, batch - 1)
+        generator._feature_cache = feature_cache
+        data_df = generator.generate()
+
         with tempfile.TemporaryDirectory() as temp_dir:
             # Render
+            # Remove any we know to be valid
+            data_df["drop"] = data_df["image"] + data_df["style"]
+            not_sure_df = data_df[data_df["drop"].map(lambda v: v not in look_up_table or random.randint(0, 100) < 98)]
+            sure_df = data_df[~data_df["drop"].isin(not_sure_df["drop"])]
+            sure_no_df = sure_df[sure_df["drop"].map(lambda v: not look_up_table[v])]
+            sure_yes_df = sure_df[sure_df["drop"].map(lambda v: look_up_table[v])]
+
+            assert sure_no_df.shape[0] + sure_yes_df.shape[0] + not_sure_df.shape[0] == data_df.shape[0]
+            print("Cache has eliminated: {}".format(sure_df.shape[0]))
+
             names = render(
                 args.images_fpath,
                 temp_dir,
                 args.fonts_fpath,
                 None,
                 None,
-                df=data_df
+                df=not_sure_df,
+                force=True # incase there is collision
             )
 
             filenames = [os.path.split(n)[1] for n in names]
-            data_df.loc[:, "filenames"] = filenames
+            not_sure_df.loc[:, "filenames"] = filenames
 
             print("A list of images have been generated at:")
             print(temp_dir)
@@ -121,24 +149,41 @@ def main():
                     exit()
 
             new_files = os.listdir(temp_dir)
-            data_df = data_df[data_df["filenames"].isin(new_files)]
+            new_sure_df = not_sure_df[not_sure_df["filenames"].isin(new_files)]
+            removed_not_sure_df = not_sure_df[~not_sure_df["drop"].isin(new_sure_df["drop"])]
+
+            # Update lookup
+            for _, row in new_sure_df.iterrows():
+                look_up_table[row["drop"]] = True
+
+            for _, row in removed_not_sure_df.iterrows():
+                look_up_table[row["drop"]] = False
+
+            data_df = pd.merge(new_sure_df, sure_df, how="outer")
 
             print()
             print("GENERATED: ")
             print(data_df)
             print()
 
+            # Cannot train if only two result output for multiclass, must have atleast 3
+            if data_df.size <= 2:
+                continue
+
             st_i = StyleInferer(classes=RENDER_STYLE[:-1])
             load_images = [Image.open(os.path.join(args.images_fpath, fpath)) for fpath in data_df["image"]]
-            model = st_i.train(load_images, data_df["quote_source"], data_df["quote"], data_df["style"], args.load_model)
+            model = st_i.train(load_images, data_df["quote_source"], data_df["quote"], data_df["style"], model)
 
+            # Write snapshot
             with open(args.save_model + "_training", "w+b") as f:
                 pickle.dump(model, f)
 
+            with open("look_table.pickle_training", "w+b") as f:
+                pickle.dump(look_up_table, f)
+
             # Calculate accuracy
             if args.training_data is not None:
-                print("TEST DATA:")
-                print()
+
                 training_df = pd.read_csv(args.training_data)
                 load_images = [Image.open(os.path.join(args.images_fpath, fpath)) for fpath in training_df["image"]]
                 predictions = st_i.infer(load_images, training_df["quote_source"], training_df["quote"], model)
@@ -147,19 +192,31 @@ def main():
                 label = training_df[["image", "style"]]
                 label_pred = label.copy()
                 label_pred.loc[:, "style"] = label_predictions
+                print()
+                print("PREDICTIONS: ")
+                print(label_pred)
+                print()
                 common = pd.merge(label_pred, label, how="inner")
 
+                print()
+                print("TEST DATA:")
                 print(common)
                 print(f"Accuracy: {len(common) / len(label)}")
 
             confirm = None
             while confirm != "y":
-                confirm = input("Ovewrite mode? y, e to exit: ")
+                confirm = input("Ovewrite model? y, e to exit: ")
                 if confirm == "e":
                     exit()
 
             with open(args.save_model, "w+b") as f:
                 pickle.dump(model, f)
+            with open("look_table.pickle", "w+b") as f:
+                pickle.dump(look_up_table, f)
+
+
+            # Save feature cache across sessions
+            feature_cache = generator._feature_cache
 
 
 

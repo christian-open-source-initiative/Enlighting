@@ -39,15 +39,14 @@ class StyleInferer:
             self._feature_cache[img.filename] = result
             return result
 
-    def train(self, imgs, quote_srcs, quotes, styles, model_fpath=None):
+    def train(self, imgs, quote_srcs, quotes, styles, model=None):
         """Trains the given style."""
         multilabel_classifier = None
-        if model_fpath is None:
+        if model is None:
             clf = svm.SVC(decision_function_shape="ovo")
             multilabel_classifier = MultiOutputClassifier(clf, n_jobs=-1)
         else:
-            with open(model_fpath) as f:
-                multilabel_classifier = pickle.loads(f)
+            multilabel_classifier = model
 
         X = [self.calculate_image_feature_vector(img) for img in imgs]
         Y = [[self.classes_encoded[s]] for s in styles]
