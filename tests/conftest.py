@@ -89,13 +89,17 @@ def output_folder(workspace_fpath):
     return os.path.join(workspace_fpath, "output")
 
 @pytest.fixture(scope="session")
+def ai_model_folder(workspace_fpath):
+    return os.path.join(workspace_fpath, "model")
+
+@pytest.fixture(scope="session")
 def fonts_folder(workspace_fpath):
     dest =  os.path.join(workspace_fpath, "fonts")
     copytree(os.path.join(TEST_DIR, os.pardir, "fonts"), dest)
     return dest
 
 @pytest.fixture(scope="session")
-def enlighten_render_csv(image_folder, fonts_folder):
+def enlighten_render_csv(image_folder, fonts_folder, ai_model_folder):
     """
     Helper wrapper function to wrap around render function.
     """
@@ -104,7 +108,8 @@ def enlighten_render_csv(image_folder, fonts_folder):
             image_folder,
             output_folder,
             fonts_folder,
-            input_csv
+            input_csv,
+            os.path.join(ai_model_folder, "svm.pickle")
         )
 
     return _render

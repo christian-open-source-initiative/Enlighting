@@ -3,13 +3,15 @@ Generates training data for our CSV file.
 """
 
 import os
-import csv
 import random
 import hashlib
 
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from types import GeneratorType
+
+# pandas
+import pandas as pd
 
 # enlight
 import enlight.utils as utils
@@ -40,10 +42,11 @@ class EnlightCSVDataGenerator(ABC):
         self.image_folder = img_folder
         self.max_data = max_data
 
-    def generate_csv(self, output_fpath):
+    def generate(self):
         """
-        Generates the csv file with max_data specified in class.
+        Returns a list of tuples with generated data.
         """
+
         # grab image lists
         img_names = utils.load_image_names(self.image_folder)
         img_names = [os.path.split(p)[1] for p in img_names]
@@ -61,13 +64,15 @@ class EnlightCSVDataGenerator(ABC):
                 image_name = img_names[random.randint(0, len(img_names) - 1)]
 
             assert image_name in hash_lookup_img_names, "Provided image is not a valid image name."
-            results.append((image_name, quote_source, quote, style))
+            results.append(dict(zip(self.fields, (image_name, quote_source, quote, style))))
+        return pd.DataFrame.from_records(results)
 
-        with open(output_fpath, "w") as f:
-            csv_writer = csv.DictWriter(f, fieldnames=self.fields, delimiter=",", quotechar="\"", escapechar="\\")
-            csv_writer.writeheader()
-            for r in results:
-                csv_writer.writerow(dict(zip(self.fields, r)))
+    def generate_csv(self, output_fpath):
+        """
+        Generates the csv file with max_data specified in class.
+        """
+        result = self.generate()
+        result.to_csv(output_fpath, index=False)
 
     @abstractmethod
     def image_select(self, img_list, quote_source, quote):

@@ -2,6 +2,7 @@
 
 import os
 import glob
+import pickle
 
 from hashlib import md5
 from random import randint
@@ -12,6 +13,9 @@ from PIL import Image, ImageOps
 
 # pandas
 import pandas as pd
+
+# tqdm
+from tqdm import tqdm
 
 # enlight
 import enlight.utils as utils
@@ -40,6 +44,7 @@ def render(
     output_fpath: str,
     fonts_fpath: str,
     input_csv: str,
+    ai_model_file: str,
     render_style: str = "auto",
     escape_string: str = "\\",
     font: str = DEFAULT_FONT,
@@ -85,13 +90,23 @@ def render(
     if len(input_data) == 0:
         raise RuntimeError(f"No valid CSV loaded in: {input_csv}")
 
+    ai_model = None
+    try:
+        with open(ai_model_file) as f:
+            ai_model = pickle.load(f)
+    except Exception as e:
+        print(f"Unable to load AI model: {str(e)}")
+
     # Generate the image
     style_column = 3
     quotes_column = 2
     source_column = 1
     image_column = 0
     font_fpath = os.path.join(fonts_fpath, font)
-    for _, row in input_data.iterrows():
+
+    output_names = []
+    progress_bar = tqdm(range(input_data.shape[0]))
+    for _, (_, row) in zip(progress_bar, input_data.iterrows()):
         quote = row[quotes_column].replace("\\n", "\n")
         source = row[source_column]
         style = row[style_column] if render_style == "auto" else render_style
@@ -110,15 +125,15 @@ def render(
         img_box = itools.Box(0, 0, img_size[0], img_size[1])
 
         # Generate unique output fpath
-        uid = md5(source.encode()).hexdigest()[0:6]
+        uid = md5(source.encode()).hexdigest()
         output_fpath_mod = os.path.join(output_fpath, uid + ".jpg")
         if os.path.exists(output_fpath_mod) and not force:
             raise RuntimeError(f"Output already exists for {output_fpath_mod}. Consider use --force to overwrite.")
 
         # Use AI if applicable!
         if style is None or str(style) == "nan" or len(style) == 0:
-            s_infer = StyleInferer()
-            style = s_infer.infer_style(img, source, quote)
+            s_infer = StyleInferer(utils.RENDER_STYLE[:-1])
+            style = s_infer.infer(img, source, quote, ai_model)
 
         # Generate transparent overlay
         overlay_region = itools.calculate_margin_style(img_box, style, 0.05)
@@ -137,3 +152,5 @@ def render(
         # Save final result
         img = img.convert("RGB")
         img.save(output_fpath_mod)
+        output_names.append(output_fpath_mod)
+    return output_names

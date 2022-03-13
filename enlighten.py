@@ -36,6 +36,11 @@ def parse_args():
                         help="Type of render style. Auto defaults to csv encoding, otherwise uses AI.",
                         choices=utils.RENDER_STYLE)
 
+    # AI files
+    parser.add_argument("--ai-model-file",
+                        default="models/svm.pickle",
+                        help="The model used for AI inference.")
+
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -50,5 +55,6 @@ if __name__ == '__main__':
         args.font,
         args.font_size,
         args.tab_width,
-        args.force
+        args.force,
+        args.ai_model_file
     )
