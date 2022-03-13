@@ -16,6 +16,7 @@ sys.path.append(os.path.join(SAMPLE_DIR, "bible"))
 import bible
 
 RE_FORMAT = r"(.+) \((\w+)\)"
+ENLIGHT_COLUMNS = ["image", "quote_source", "quote", "style"]
 
 def fetch_verse(verse: bible.Verse):
     passage_formatted = verse.format("B C:V")
@@ -36,7 +37,7 @@ def convert(input_fpath: str, output_fpath: str) -> pd.DataFrame:
     """
     if os.path.exists(output_fpath):
         print("Converted file already exists. Remove to re-fetch.")
-        return pd.read_csv(output_fpath)
+        return pd.read_csv(output_fpath)[ENLIGHT_COLUMNS]
 
     bible_csv = pd.read_csv(input_fpath)
 
@@ -65,9 +66,10 @@ def convert(input_fpath: str, output_fpath: str) -> pd.DataFrame:
         bible_passage.append(result.decode("utf-8").replace("\r\n", "\n"))
 
     bible_csv.loc[:, "quote"] =  bible_passage
-    bible_csv.rename(columns={"verse": "quote_src"}, inplace=True)
+    bible_csv.rename(columns={"verse": "quote_source"}, inplace=True)
+    bible_csv = bible_csv[ENLIGHT_COLUMNS]
     print(bible_csv)
-    bible_csv.to_csv(output_fpath, index=False, columns=["image", "quote_src", "quote", "style"])
+    bible_csv.to_csv(output_fpath, index=False, columns=["image", "quote_source", "quote", "style"])
 
     return bible_csv
 

@@ -6,6 +6,7 @@ Uses Enlighten as a subroutine.
 import os
 import sys
 import re
+import pickle
 import random
 import argparse
 import tempfile
@@ -19,9 +20,17 @@ sys.path.append(os.path.join(ROOT_DIR, os.pardir, os.pardir))
 # enlighten
 from enlight.render import render
 from enlight.ai.data_generator import PseudoRandomImageCSVDataGenerator
+from enlight.ai.infer import StyleInferer
+from enlight.utils import RENDER_STYLE
+
+# pillow
+from PIL import Image
 
 # scripture_example
 from converter import convert
+
+# pandas
+import pandas as pd
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Generates scripture quotes to images using AI.")
@@ -36,8 +45,9 @@ def parse_args():
     parser.add_argument("--force", action="store_true", default=False, help="Force overwrite output files.")
 
     parser.add_argument("--train", action="store_true", default=False, help="Check to see if in training mode.")
-    parser.add_argument("--load-model", default="svm.pickle", help="Load model for inference.")
+    parser.add_argument("--load-model", default=None, help="Load model for inference.")
     parser.add_argument("--save-model", default="svm.pickle", help="Save model output location if in training mode.")
+    parser.add_argument("--training-data", default="enlighten.csv", help="Training data csv.")
 
     return parser.parse_args()
 
@@ -85,32 +95,71 @@ def main():
     data_df = generator.generate()
 
     # generate a folder with all the temp values
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Render
-        names = render(
-            args.images_fpath,
-            temp_dir,
-            args.fonts_fpath,
-            None,
-            None,
-            df=data_df
-        )
+    while True:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Render
+            names = render(
+                args.images_fpath,
+                temp_dir,
+                args.fonts_fpath,
+                None,
+                None,
+                df=data_df
+            )
 
-        filenames = [os.path.split(n)[1] for n in names]
-        data_df.loc[:, "filenames"] = filenames
+            filenames = [os.path.split(n)[1] for n in names]
+            data_df.loc[:, "filenames"] = filenames
 
-        print("A list of images have been generated at:")
-        print(temp_dir)
-        print("Delete the ones you don't want.")
+            print("A list of images have been generated at:")
+            print(temp_dir)
+            print("Delete the ones you don't want.")
 
-        confirm = None
-        while confirm != "y":
-            confirm = input("Type y, e to exit and save: ")
-            if confirm == "e":
-                exit()
+            confirm = None
+            while confirm != "y":
+                confirm = input("Type y, e to exit: ")
+                if confirm == "e":
+                    exit()
 
-        new_files = os.listdir(temp_dir)
-        data_df = data_df[data_df["filenames"].isin(new_files)]
+            new_files = os.listdir(temp_dir)
+            data_df = data_df[data_df["filenames"].isin(new_files)]
+
+            print()
+            print("GENERATED: ")
+            print(data_df)
+            print()
+
+            st_i = StyleInferer(classes=RENDER_STYLE[:-1])
+            load_images = [Image.open(os.path.join(args.images_fpath, fpath)) for fpath in data_df["image"]]
+            model = st_i.train(load_images, data_df["quote_source"], data_df["quote"], data_df["style"], args.load_model)
+
+            with open(args.save_model + "_training", "w+b") as f:
+                pickle.dump(model, f)
+
+            # Calculate accuracy
+            if args.training_data is not None:
+                print("TEST DATA:")
+                print()
+                training_df = pd.read_csv(args.training_data)
+                load_images = [Image.open(os.path.join(args.images_fpath, fpath)) for fpath in training_df["image"]]
+                predictions = st_i.infer(load_images, training_df["quote_source"], training_df["quote"], model)
+                label_predictions = [RENDER_STYLE[p[0]] for p in predictions]
+
+                label = training_df[["image", "style"]]
+                label_pred = label.copy()
+                label_pred.loc[:, "style"] = label_predictions
+                common = pd.merge(label_pred, label, how="inner")
+
+                print(common)
+                print(f"Accuracy: {len(common) / len(label)}")
+
+            confirm = None
+            while confirm != "y":
+                confirm = input("Ovewrite mode? y, e to exit: ")
+                if confirm == "e":
+                    exit()
+
+            with open(args.save_model, "w+b") as f:
+                pickle.dump(model, f)
 
 
 
