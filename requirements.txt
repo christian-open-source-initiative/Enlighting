@@ -1,6 +1,6 @@
 numpy==1.*
 pandas
-Pillow==9.0.1
+Pillow
 torch==1.*
 transformers==4.17.*
 tqdm==0.4.4
