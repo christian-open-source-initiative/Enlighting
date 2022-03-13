@@ -1,6 +1,9 @@
 """
 Converts a csv of scripture references into quote images.
 Uses Enlighten as a subroutine.
+
+Also provides an interactive "generate" mode which allows for marking and training of data
+for this domain.
 """
 
 import os
@@ -20,11 +23,6 @@ sys.path.append(os.path.join(ROOT_DIR, os.pardir, os.pardir))
 # enlighten
 from enlight.render import render
 from enlight.ai.data_generator import PseudoRandomImageCSVDataGenerator
-from enlight.ai.infer import StyleInferer
-from enlight.utils import RENDER_STYLE
-
-# pillow
-from PIL import Image
 
 # scripture_example
 from converter import convert
@@ -41,13 +39,9 @@ def parse_args():
     parser.add_argument("--output-fpath", default="output", help="Output folder.")
     parser.add_argument("--images-fpath", help="Default images folder", default="images")
     parser.add_argument("--fonts-fpath", default="fonts", help="Folder container valid fonts.")
-
     parser.add_argument("--force", action="store_true", default=False, help="Force overwrite output files.")
 
-    parser.add_argument("--train", action="store_true", default=False, help="Check to see if in training mode.")
-    parser.add_argument("--load-model", default=None, help="Load model for inference.")
-    parser.add_argument("--save-model", default="svm.pickle", help="Save model output location if in training mode.")
-    parser.add_argument("--training-data", default="enlighten.csv", help="Training data csv.")
+    parser.add_argument("--generate", action="store_true", default=False, help="Interactive mode to train data.")
     parser.add_argument("--batch-size", "-b", default=256, help="Size of labels to generate at once.", type=int)
 
     return parser.parse_args()
@@ -71,7 +65,7 @@ def main():
     args = parse_args()
 
     # Render result and exit
-    if not args.train:
+    if not args.generate:
         df = convert(args.input_csv, args.output_csv)
 
         # remove redundant spaces
@@ -98,11 +92,6 @@ def main():
     else:
         print("New lookup table.")
         look_up_table = {}
-
-    model = None
-    if args.load_model is not None:
-        with open(args.load_model) as f:
-            model = pickle.loads(f)
 
     # generate a folder with all the temp values
     feature_cache = {}
@@ -170,56 +159,12 @@ def main():
             if data_df.size <= 2:
                 continue
 
-            st_i = StyleInferer(classes=RENDER_STYLE[:-1])
-            load_images = [Image.open(os.path.join(args.images_fpath, fpath)) for fpath in data_df["image"]]
-            model = st_i.train(load_images, data_df["quote_source"], data_df["quote"], data_df["style"], model)
-
             # Write snapshot
-            with open(args.save_model + "_training", "w+b") as f:
-                pickle.dump(model, f)
-
-            with open("look_table.pickle_training", "w+b") as f:
-                pickle.dump(look_up_table, f)
-
-            # Calculate accuracy
-            if args.training_data is not None:
-
-                training_df = pd.read_csv(args.training_data)
-                load_images = [Image.open(os.path.join(args.images_fpath, fpath)) for fpath in training_df["image"]]
-                predictions = st_i.infer(load_images, training_df["quote_source"], training_df["quote"], model)
-                label_predictions = [RENDER_STYLE[p[0]] for p in predictions]
-
-                label = training_df[["image", "style"]]
-                label_pred = label.copy()
-                label_pred.loc[:, "style"] = label_predictions
-                print()
-                print("PREDICTIONS: ")
-                print(label_pred)
-                print()
-                common = pd.merge(label_pred, label, how="inner")
-
-                print()
-                print("TEST DATA:")
-                print(common)
-                print(f"Accuracy: {len(common) / len(label)}")
-
-            confirm = None
-            while confirm != "y":
-                confirm = input("Ovewrite model? y, e to exit: ")
-                if confirm == "e":
-                    exit()
-
-            with open(args.save_model, "w+b") as f:
-                pickle.dump(model, f)
             with open("look_table.pickle", "w+b") as f:
                 pickle.dump(look_up_table, f)
 
-
             # Save feature cache across sessions
             feature_cache = generator._feature_cache
-
-
-
 
 if __name__ == "__main__":
     main()

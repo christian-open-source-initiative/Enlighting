@@ -105,6 +105,7 @@ def render(
     font_fpath = os.path.join(fonts_fpath, font)
 
     output_names = []
+    s_infer = StyleInferer(utils.RENDER_STYLE[:-1])
     progress_bar = tqdm(range(input_data.shape[0]))
     for _, (_, row) in zip(progress_bar, input_data.iterrows()):
         quote = row[quotes_column].replace("\\n", "\n")
@@ -132,7 +133,6 @@ def render(
 
         # Use AI if applicable!
         if style is None or str(style) == "nan" or len(style) == 0:
-            s_infer = StyleInferer(utils.RENDER_STYLE[:-1])
             # Generated image may have filename removed. Custom set for cache to work.
             setattr(img, "filename", uid + ".jpg")
             style = utils.RENDER_STYLE[s_infer.infer([img], [source], [quote], ai_model)[0][0]]

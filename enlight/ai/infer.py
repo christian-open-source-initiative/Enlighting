@@ -25,17 +25,18 @@ class StyleInferer:
         self.classes_encoded = {k: i for i, k in enumerate(classes)}
         self._feature_cache = {}
 
+        self.feature_extractor = BeitFeatureExtractor.from_pretrained("microsoft/beit-base-patch16-224-pt22k")
+        self.model = BeitModel.from_pretrained("microsoft/beit-base-patch16-224-pt22k")
+
     def calculate_image_feature_vector(self, img):
         if img.filename in self._feature_cache:
             return self._feature_cache[img.filename]
 
         # feature extract
-        feature_extractor = BeitFeatureExtractor.from_pretrained("microsoft/beit-base-patch16-224-pt22k")
-        inputs = feature_extractor(img.convert("RGB"), return_tensors="pt")
+        inputs = self.feature_extractor(img.convert("RGB"), return_tensors="pt")
 
-        model = BeitModel.from_pretrained("microsoft/beit-base-patch16-224-pt22k")
         with torch.no_grad():
-            result = model(**inputs).last_hidden_state.numpy().flatten()
+            result = self.model(**inputs).last_hidden_state.numpy().flatten()
             self._feature_cache[img.filename] = result
             return result
 

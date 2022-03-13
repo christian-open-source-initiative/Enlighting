@@ -32,13 +32,13 @@ def parse_args():
 
     # Style
     parser.add_argument("--render-style", "-r",
-                        default="full",
+                        default="auto",
                         help="Type of render style. Auto defaults to csv encoding, otherwise uses AI.",
                         choices=utils.RENDER_STYLE)
 
     # AI files
     parser.add_argument("--ai-model-file",
-                        default="models/svm.pickle",
+                        default="models/svm_linear_train_in_group_only.pickle",
                         help="The model used for AI inference.")
 
     return parser.parse_args()
