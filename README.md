@@ -1,4 +1,6 @@
-# Enlighting V2: A AI Powered Quote Image Renderer
+# Enlighting v2: An AI Powered Quote Image Renderer
+
+<img src="examples/collage.jpg" width="40%" />
 
 Need to generate inspirational quotes in bulk and don't want to tinker with font sizes every image source but have a preference on where to place a quote?
 

@@ -14,8 +14,8 @@ from PIL import Image, ImageFont, ImageDraw
 class Box:
     """Helper class for drawing boxes."""
     def __init__(self, x, y, x2, y2):
-        assert x < x2
-        assert y < y2
+        assert x <= x2
+        assert y <= y2
 
         self.x = x
         self.y = y
