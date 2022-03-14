@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed for any bug fixes.
 - Security in case of vulnerabilities.
 
+## v2.1.0
+
+- Added collage mode to generate a collage of images for looking at multiple images.
+- Fixed README typo.
+
 ## v2.0.0
 
 - Added `auto` mode which supports AI models via `--ai-model-file`.

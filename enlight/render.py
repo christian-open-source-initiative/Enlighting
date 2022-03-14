@@ -152,7 +152,7 @@ def render(
                              text_region,
                              quote + " \n\n" + source,
                              font_fpath,
-                             target_percentage=0.055,
+                             target_percentage=0.025,
                              tab_space = tab_width,
                              font_range=(0, font_size))
 
